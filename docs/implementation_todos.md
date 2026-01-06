@@ -4,13 +4,13 @@ This checklist assumes the architecture in `docs/shopee_crawler_plan.md` (host C
 
 ## A) Repository shape / ergonomics
 
-- [ ] Decide the canonical workspace layout.
-- [ ] Add a top-level `Makefile` (or `justfile`) with:
+- [x] Decide the canonical workspace layout (repo root).
+- [x] Add a top-level `Makefile` (or `justfile`) with:
   - `make dev-chrome` (start Chrome)
   - `make dev-doctor` (check `:9222`)
   - `make dev-once URL=...` (one-shot crawl)
   - `make docker-once TARGET_URL=...` (parity check)
-- [ ] Standardize env var names and document them:
+- [x] Standardize env var names and document them:
   - `CHROME_DEBUG_PORT`, `CHROME_PROFILE_DIR`, `CODEX_CMD`, `TARGET_URL`
 
 ## B) Codex + MCP configuration
@@ -19,7 +19,7 @@ This checklist assumes the architecture in `docs/shopee_crawler_plan.md` (host C
   - local dev (browser URL: `http://127.0.0.1:9222`)
   - Docker (browser URL: `http://host.docker.internal:9222`)
 - [ ] Decide how `codex` is installed in the Docker image (base image, install script, or bind mount).
-- [ ] Add a `scripts/print_codex_config.sh` (optional) to help devs verify the MCP server is configured.
+- [ ] Add a `cmd/devtool` subcommand (optional) to print/validate Codex MCP config.
 
 ## C) Crawler prompt + extraction contract (stability first)
 

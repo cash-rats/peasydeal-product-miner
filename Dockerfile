@@ -4,8 +4,10 @@
 FROM golang:1.22-bookworm AS build
 
 WORKDIR /src
-COPY runner/ /src/runner/
-RUN cd /src/runner && go build -o /out/runner .
+COPY go.mod /src/go.mod
+COPY internal/ /src/internal/
+COPY cmd/runner/ /src/cmd/runner/
+RUN cd /src && go build -o /out/runner ./cmd/runner
 
 FROM debian:bookworm-slim
 
