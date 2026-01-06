@@ -202,9 +202,10 @@ Keep a versioned prompt file like `/app/config/prompt.txt` that instructs the ag
 README.md
 docker-compose.yml
 Dockerfile
-runner/
-  go.mod
+cmd/runner/
   main.go
+internal/runner/
+  runner.go
 config/
   schema.product.json
   prompt.product.txt
@@ -214,10 +215,8 @@ codex/
     config.toml
     auth.json        # (optional) if you want auth persisted
 out/                # mounted output dir
-scripts/
-  start_host_chrome.sh
-  doctor.sh
-  run_once.sh
+cmd/devtool/
+  main.go           # chrome/doctor/once helper commands
 ```
 
 ---
@@ -240,13 +239,13 @@ scripts/
 ## 8) Developer quickstart (new dev machine)
 
 1) Start the dedicated Chrome profile (DevTools on `9222`)
-- `scripts/start_host_chrome.sh`
+- `make dev-chrome`
 
 2) Verify DevTools is reachable
-- `scripts/doctor.sh`
+- `make dev-doctor`
 
 3) Run a single URL locally (fastest iteration loop)
-- `scripts/run_once.sh "https://shopee.tw/..."` (writes a JSON file into `out/`)
+- `make dev-once URL="https://shopee.tw/..."` (writes a JSON file into `out/`)
 
 4) Run the deployable stack (parity check)
 - `cp .env.example .env` (edit `TARGET_URL` as needed)

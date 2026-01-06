@@ -1,5 +1,8 @@
 .DS_Store
 
+# Local env (docker compose reads this)
+.env
+
 # Crawl outputs
 /out/
 
