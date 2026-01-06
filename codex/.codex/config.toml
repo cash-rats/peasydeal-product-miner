@@ -1,0 +1,9 @@
+# Template config for using Chrome DevTools MCP against host Chrome.
+#
+# In Docker, point to: http://host.docker.internal:9222
+# On the host, point to: http://127.0.0.1:9222
+
+[mcp_servers.chrome-devtools-mcp]
+command = "npx"
+args = ["-y", "chrome-devtools-mcp@latest", "--browser-url=http://host.docker.internal:9222"]
+

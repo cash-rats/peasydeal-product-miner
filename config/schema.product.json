@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ShopeeProductCrawlResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["url", "status", "captured_at"],
+  "properties": {
+    "url": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["ok", "needs_manual", "error"] },
+    "captured_at": { "type": "string", "minLength": 1 },
+    "title": { "type": "string" },
+    "price": { "type": ["number", "string"] },
+    "currency": { "type": "string" },
+    "shop_name": { "type": "string" },
+    "error": { "type": "string" },
+    "notes": { "type": "string" }
+  }
+}
+

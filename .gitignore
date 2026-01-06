@@ -1,0 +1,15 @@
+.DS_Store
+
+# Crawl outputs
+/out/
+
+# Local Codex state (optional)
+/codex/.codex/auth.json
+
+# Local Go build state
+**/.gocache/
+**/.gopath/
+
+# Python (optional tooling)
+__pycache__/
+*.pyc
