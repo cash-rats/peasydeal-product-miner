@@ -1,0 +1,20 @@
+services:
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - HOME=/codex
+      - CODEX_CMD=codex
+      - TARGET_URL=${TARGET_URL}
+    volumes:
+      - ./out:/out
+      - ./config:/app/config:ro
+      - ./codex:/codex:rw
+    # Template: run a single URL (set TARGET_URL in `.env`).
+    command: >
+      sh -lc
+      '/app/runner
+      -url "${TARGET_URL}"
+      -prompt-file /app/config/prompt.product.txt
+      -out-dir /out'
