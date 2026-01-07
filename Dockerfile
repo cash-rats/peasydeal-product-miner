@@ -9,7 +9,7 @@ COPY internal/ /src/internal/
 COPY cmd/runner/ /src/cmd/runner/
 RUN cd /src && go build -o /out/runner ./cmd/runner
 
-FROM debian:bookworm-slim
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ COPY config/ /app/config/
 COPY --from=build /out/runner /app/runner
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates nodejs npm \
+  && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Codex CLI inside the image (requires network access during build).
