@@ -52,6 +52,9 @@ From Chrome 136 onward, `--remote-debugging-port` is **not respected** when atte
 
 ### 2.2 Docker-to-host connectivity uses `host.docker.internal` (Docker Desktop)
 
+On macOS/Windows with Docker Desktop, containers can reach services on the host using:
+- `host.docker.internal`
+
 On macOS/Windows with Docker Desktop, containers can reach services on the host using the special hostname:
 - `host.docker.internal`
 
@@ -268,8 +271,8 @@ cmd/devtool/
 - Host Chrome not started with `--remote-debugging-port`
 - Missing required `--user-data-dir` on Chrome 136+
 - Port 9222 already in use
-- Container cannot resolve/reach `host.docker.internal`
-  - confirm Docker Desktop is used
+- Container cannot reach host Chrome
+  - ensure MCP browser URL is `http://host.docker.internal:9222`
 
 ### “Crawl output says needs_manual”
 - Shopee session expired

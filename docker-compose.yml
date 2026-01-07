@@ -6,7 +6,10 @@ services:
     environment:
       - HOME=/codex
       - CODEX_CMD=codex
+      - CODEX_SKIP_GIT_REPO_CHECK=${CODEX_SKIP_GIT_REPO_CHECK:-1}
       - TARGET_URL=${TARGET_URL}
+    stdin_open: true
+    tty: true
     volumes:
       - ./out:/out
       - ./config:/app/config:ro

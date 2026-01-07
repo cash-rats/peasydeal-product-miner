@@ -41,9 +41,21 @@ Requires Go 1.22+ installed. Local runs use your host `codex` configuration in `
 
 ## Docker (parity check)
 
-`docker-compose.yml` runs the same runner in Docker while controlling the host Chrome via `host.docker.internal:9222`.
+`docker-compose.yml` assumes the runner container can reach host Chrome at `http://host.docker.internal:9222` (Docker Desktop).
 
 ```bash
 cp .env.example .env
 make docker-once TARGET_URL="https://shopee.tw/..."
 ```
+
+## Codex auth in Docker
+
+The container uses `HOME=/codex` and mounts `./codex` to persist Codex auth/config across runs.
+
+```bash
+make docker-shell
+```
+
+Then run the Codex auth/login command you normally use; the resulting files should land under `./codex/.codex/`.
+
+If you see `Not inside a trusted directory and --skip-git-repo-check was not specified.`, keep `CODEX_SKIP_GIT_REPO_CHECK=1` in `.env`.

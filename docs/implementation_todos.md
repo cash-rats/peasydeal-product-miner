@@ -15,10 +15,10 @@ This checklist assumes the architecture in `docs/shopee_crawler_plan.md` (host C
 
 ## B) Codex + MCP configuration
 
-- [ ] Define the “official” Codex MCP server config for:
+- [x] Define the “official” Codex MCP server config for:
   - local dev (browser URL: `http://127.0.0.1:9222`)
   - Docker (browser URL: `http://host.docker.internal:9222`)
-- [ ] Decide how `codex` is installed in the Docker image (base image, install script, or bind mount).
+- [x] Install `codex` in the Docker image (via `npm install -g`, configurable with `CODEX_NPM_PKG` build arg).
 - [ ] Add a `cmd/devtool` subcommand (optional) to print/validate Codex MCP config.
 
 ## C) Crawler prompt + extraction contract (stability first)
