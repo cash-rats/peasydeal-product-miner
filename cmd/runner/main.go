@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"peasydeal-product-miner/internal/runner"
 )
@@ -23,6 +24,7 @@ func main() {
 		PromptFile: *promptFile,
 		OutDir:     *outDir,
 		CodexCmd:   *codexCmd,
+		SkipGitRepoCheck: getenvBool("CODEX_SKIP_GIT_REPO_CHECK", false),
 	})
 
 	// Preserve prior behavior: always write a result JSON file if possible and print its path.
@@ -43,3 +45,17 @@ func getenvDefault(key string, def string) string {
 	return def
 }
 
+func getenvBool(key string, def bool) bool {
+	v, ok := os.LookupEnv(key)
+	if !ok {
+		return def
+	}
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "y", "on":
+		return true
+	case "0", "false", "no", "n", "off":
+		return false
+	default:
+		return def
+	}
+}

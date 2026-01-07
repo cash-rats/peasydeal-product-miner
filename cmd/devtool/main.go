@@ -156,10 +156,11 @@ func cmdOnce(args []string) error {
 	}
 
 	outPath, _, err := runnerPkg.RunOnce(runnerPkg.Options{
-		URL:        *url,
-		PromptFile: *promptFile,
-		OutDir:     *outDir,
-		CodexCmd:   getenvDefault("CODEX_CMD", "codex"),
+		URL:              *url,
+		PromptFile:       *promptFile,
+		OutDir:           *outDir,
+		CodexCmd:         getenvDefault("CODEX_CMD", "codex"),
+		SkipGitRepoCheck: getenvBool("CODEX_SKIP_GIT_REPO_CHECK", false),
 	})
 	if outPath != "" {
 		fmt.Println(outPath)
@@ -176,6 +177,21 @@ func getenvDefault(key string, def string) string {
 		return v
 	}
 	return def
+}
+
+func getenvBool(key string, def bool) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if v == "" {
+		return def
+	}
+	switch v {
+	case "1", "true", "yes", "y", "on":
+		return true
+	case "0", "false", "no", "n", "off":
+		return false
+	default:
+		return def
+	}
 }
 
 func userHomeDir() string {
