@@ -24,6 +24,9 @@ type Options struct {
 	PromptFile string
 	OutDir     string
 	CodexCmd   string
+	// SkipGitRepoCheck passes `--skip-git-repo-check` to Codex CLI.
+	// This is useful in containers or non-git directories.
+	SkipGitRepoCheck bool
 }
 
 func RunOnce(opts Options) (string, Result, error) {
@@ -54,7 +57,7 @@ func RunOnce(opts Options) (string, Result, error) {
 		return outPath, r, err
 	}
 
-	raw, err := runCodex(opts.CodexCmd, prompt)
+	raw, err := runCodex(opts.CodexCmd, opts.SkipGitRepoCheck, prompt)
 	if err != nil {
 		r := errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, r)
@@ -101,8 +104,15 @@ func loadPrompt(promptPath string, url string) (string, error) {
 	return strings.ReplaceAll(string(b), "{{URL}}", url), nil
 }
 
-func runCodex(codexCmd string, prompt string) (string, error) {
-	cmd := exec.Command(codexCmd, "exec", prompt)
+func runCodex(codexCmd string, skipGitRepoCheck bool, prompt string) (string, error) {
+	// Codex CLI expects exec-scoped flags after the subcommand:
+	//   codex exec --skip-git-repo-check "<prompt>"
+	args := []string{"exec"}
+	if skipGitRepoCheck {
+		args = append(args, "--skip-git-repo-check")
+	}
+	args = append(args, prompt)
+	cmd := exec.Command(codexCmd, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -173,4 +183,3 @@ func (r Result) setdefault(key string, value any) {
 		r[key] = value
 	}
 }
-

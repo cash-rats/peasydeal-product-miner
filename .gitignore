@@ -8,6 +8,9 @@
 
 # Local Codex state (optional)
 /codex/.codex/auth.json
+/codex/.codex/sessions/
+/codex/.codex/skills/
+/codex/.npm/
 
 # Local Go build state
 **/.gocache/

@@ -10,10 +10,13 @@
     "captured_at": { "type": "string", "minLength": 1 },
     "title": { "type": "string" },
     "price": { "type": ["number", "string"] },
-    "currency": { "type": "string" },
-    "shop_name": { "type": "string" },
     "error": { "type": "string" },
     "notes": { "type": "string" }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "ok" } } },
+      "then": { "required": ["title", "price"] }
+    }
+  ]
 }
-

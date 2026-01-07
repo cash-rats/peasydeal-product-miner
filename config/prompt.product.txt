@@ -2,16 +2,13 @@ You are controlling an already-running Google Chrome via Chrome DevTools.
 
 Task:
 1) Navigate to this Shopee product URL: {{URL}}
-2) Wait for the product page to be ready (title + price visible).
+2) Wait for the product page to be ready (product title and price visible).
 3) Extract:
    - title
-   - price (number if possible)
-   - currency (e.g. TWD)
-   - shop_name
+   - price (number if possible; otherwise a string)
 4) If you detect login/verify/CAPTCHA walls, return status="needs_manual" with a brief explanation in "error" (or "notes").
 
 Output requirements:
 - Output ONLY a single JSON object.
 - JSON must include: url, status, captured_at (ISO8601 or timestamp string)
 - If status != "ok", include "error" describing what you saw.
-
