@@ -13,9 +13,10 @@ help:
 	"Targets:" \
 	"  make dev-chrome                 Start Chrome with DevTools enabled" \
 	"  make dev-doctor                 Check DevTools is reachable on localhost" \
-	"  make dev-once URL=<product_url> Crawl one URL on the host (fast loop)" \
-	"  make docker-once TARGET_URL=<product_url> Crawl one URL in Docker (parity check)" \
-	"  make docker-shell               Open a shell in the runner container (useful for Codex auth)"
+	"  make dev-once <product_url>     Crawl one URL on the host (fast loop)" \
+	"  make docker-once <product_url>  Crawl one URL in Docker (parity check)" \
+	"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
+	"  make docker-login               Authorize host Codex for the Docker runner"
 
 .PHONY: dev-chrome
 dev-chrome:
@@ -33,8 +34,18 @@ dev-once:
 .PHONY: docker-once
 docker-once:
 	@URL="$(word 2,$(MAKECMDGOALS))"; \
-	docker compose run --rm runner
+	docker compose run --rm --build -e TARGET_URL="$$URL" runner
 
 .PHONY: docker-shell
 docker-shell:
 	docker compose run --rm runner sh
+
+.PHONY: docker-login
+docker-login:
+	@if [[ -f "/.dockerenv" ]]; then echo "Run this on the host (not inside Docker), so your browser can reach the local callback server."; exit 2; fi
+	mkdir -p ./codex
+	@codex_cmd="$${CODEX_CMD:-codex}"; \
+	codex_bin="$$(command -v "$$codex_cmd" || true)"; \
+	if [[ -z "$$codex_bin" ]]; then echo "codex not found in PATH (or CODEX_CMD). Try: CODEX_CMD=/full/path/to/codex make docker-login"; exit 127; fi; \
+	echo "Using Codex: $$codex_bin"; \
+	HOME="$(CURDIR)/codex" "$$codex_bin" login
