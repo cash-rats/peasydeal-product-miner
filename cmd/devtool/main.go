@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -33,6 +34,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
 			os.Exit(1)
 		}
+	case "docker-doctor":
+		if err := cmdDockerDoctor(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, "ERROR:", err)
+			os.Exit(1)
+		}
 	case "once":
 		if err := cmdOnce(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
@@ -52,6 +58,7 @@ func usage() {
 Usage:
   go run ./cmd/devtool chrome [--port 9222] [--profile-dir <dir>]
   go run ./cmd/devtool doctor [--port 9222]
+  go run ./cmd/devtool docker-doctor [--port 9222] [--auth-file <path>]
   go run ./cmd/devtool once --url <url> [--prompt-file <path>] [--out-dir <dir>]
 
 Env vars:
@@ -92,7 +99,12 @@ func cmdChrome(args []string) error {
 			"--remote-debugging-port="+*port,
 			"--user-data-dir="+*profileDir,
 		)
-		return cmd.Start()
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		fmt.Printf("Chrome launch requested (port=%s, profile=%s)\n", *port, *profileDir)
+		fmt.Printf("DevTools check: http://127.0.0.1:%s/json/version\n", *port)
+		return nil
 	case "linux":
 		bin, err := findFirstInPath([]string{"google-chrome", "google-chrome-stable", "chromium", "chromium-browser"})
 		if err != nil {
@@ -104,7 +116,12 @@ func cmdChrome(args []string) error {
 		)
 		cmd.Stdout = io.Discard
 		cmd.Stderr = io.Discard
-		return cmd.Start()
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		fmt.Printf("Chrome launch requested (port=%s, profile=%s)\n", *port, *profileDir)
+		fmt.Printf("DevTools check: http://127.0.0.1:%s/json/version\n", *port)
+		return nil
 	default:
 		return fmt.Errorf("unsupported OS for auto-launch: %s (start Chrome manually with --remote-debugging-port and --user-data-dir)", runtime.GOOS)
 	}
@@ -136,7 +153,51 @@ func cmdDoctor(args []string) error {
 	if len(bytesTrimSpace(b)) == 0 {
 		return fmt.Errorf("empty response from %s", url)
 	}
-	fmt.Println("OK: Chrome DevTools reachable.")
+	fmt.Println("✅ OK: Chrome DevTools reachable.")
+	return nil
+}
+
+func cmdDockerDoctor(args []string) error {
+	fs := flag.NewFlagSet("docker-doctor", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	defPort := getenvDefault("CHROME_DEBUG_PORT", "9222")
+	port := fs.String("port", defPort, "Chrome DevTools remote debugging port on the host")
+	authFile := fs.String("auth-file", filepath.Join("codex", ".codex", "auth.json"), "Path to Codex auth.json persisted for Docker runs")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("http://127.0.0.1:%s/json/version", *port)
+	client := &http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return fmt.Errorf("host Chrome DevTools not reachable at %s (start it via `make dev-chrome` and login/solve CAPTCHA if needed): %w", url, err)
+	}
+	resp.Body.Close()
+	fmt.Printf("✅ Chrome ready: DevTools reachable at %s\n", url)
+
+	info, err := os.Stat(*authFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("Codex auth missing at %s (run `make docker-login` once)", *authFile)
+		}
+		return err
+	}
+	if info.Size() == 0 {
+		return fmt.Errorf("Codex auth file is empty at %s (run `make docker-login` again)", *authFile)
+	}
+	b, err := os.ReadFile(*authFile)
+	if err != nil {
+		return err
+	}
+	var tmp any
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return fmt.Errorf("Codex auth file is not valid JSON at %s (run `make docker-login` again): %w", *authFile, err)
+	}
+
+	fmt.Printf("✅ Codex ready: auth present at %s\n", *authFile)
+	fmt.Println("OK: Host Chrome DevTools reachable and Codex auth present for Docker.")
 	return nil
 }
 
