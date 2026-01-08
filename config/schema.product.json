@@ -4,19 +4,128 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["url", "status", "captured_at"],
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "idString": { "type": "string", "minLength": 1, "pattern": "^[0-9]+$" },
+    "money": {
+      "type": ["number", "string"],
+      "minimum": 0,
+      "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+    }
+  },
   "properties": {
     "url": { "type": "string", "minLength": 1 },
     "status": { "type": "string", "enum": ["ok", "needs_manual", "error"] },
-    "captured_at": { "type": "string", "minLength": 1 },
-    "title": { "type": "string" },
-    "price": { "type": ["number", "string"] },
+    "captured_at": { "type": "string", "format": "date-time" },
+    "source": { "type": "string", "enum": ["shopee"] },
+    "source_ids": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "shop_id", "item_id"],
+      "properties": {
+        "platform": { "type": "string", "enum": ["shopee"] },
+        "shop_id": { "$ref": "#/$defs/idString" },
+        "item_id": { "$ref": "#/$defs/idString" }
+      }
+    },
+    "shop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "description"],
+      "properties": {
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "subtitle": { "type": "string" },
+        "description": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url"],
+        "properties": {
+          "url": { "$ref": "#/$defs/nonEmptyString" },
+          "position": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "$ref": "#/$defs/nonEmptyString" },
+          "url": { "type": "string" },
+          "tier": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "pricing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "sale_price_min", "sale_price_max"],
+      "properties": {
+        "currency": { "$ref": "#/$defs/nonEmptyString" },
+        "sale_price_min": { "$ref": "#/$defs/money" },
+        "sale_price_max": { "$ref": "#/$defs/money" },
+        "retail_price_min": { "$ref": "#/$defs/money" },
+        "retail_price_max": { "$ref": "#/$defs/money" },
+        "shipping_fee_min": { "$ref": "#/$defs/money" },
+        "shipping_fee_max": { "$ref": "#/$defs/money" }
+      }
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "$ref": "#/$defs/nonEmptyString" },
+          "sku": { "type": "string" },
+          "available_stock": { "type": "integer", "minimum": 0 },
+          "purchase_limit": { "type": "integer", "minimum": 0 },
+          "sale_price": { "$ref": "#/$defs/money" },
+          "retail_price": { "$ref": "#/$defs/money" },
+          "shipping_weight_kg": { "type": ["number", "string"], "minimum": 0 },
+          "actual_weight_kg": { "type": ["number", "string"], "minimum": 0 }
+        }
+      }
+    },
+    "title": { "type": "string", "deprecated": true },
+    "price": { "type": ["number", "string"], "deprecated": true },
     "error": { "type": "string" },
     "notes": { "type": "string" }
   },
   "allOf": [
     {
       "if": { "properties": { "status": { "const": "ok" } } },
-      "then": { "required": ["title", "price"] }
+      "then": {
+        "required": ["source", "source_ids", "product", "images", "pricing"],
+        "properties": {
+          "images": { "minItems": 1 },
+          "models": { "minItems": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "needs_manual" } } },
+      "then": { "required": ["notes"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "error" } } },
+      "then": { "required": ["error"] }
     }
   ]
 }

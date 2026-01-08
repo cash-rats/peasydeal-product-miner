@@ -1,14 +1,71 @@
 You are controlling an already-running Google Chrome via Chrome DevTools.
 
+Goal: extract a "launchable product" payload from a Shopee product page.
+
 Task:
 1) Navigate to this Shopee product URL: {{URL}}
-2) Wait for the product page to be ready (product title and price visible).
-3) Extract:
-   - title
-   - price (number if possible; otherwise a string)
-4) If you detect login/verify/CAPTCHA walls, return status="needs_manual" with a brief explanation in "error" (or "notes").
+2) Wait until the page is ready:
+   - document.readyState === "complete", AND
+   - a product title is present OR page contains embedded product JSON/state.
+3) Detect blocking walls early:
+   - If the page shows login / verification / CAPTCHA (e.g., "登入", "登錄", "驗證", "captcha", "robot", slider verification),
+     return status="needs_manual" with notes explaining what you saw.
+4) Extract data (prefer structured sources over fragile DOM):
+   - First try parsing IDs from URL:
+     - /i.<shop_id>.<item_id> OR /product/<shop_id>/<item_id>
+   - Then try embedded JSON/state via page evaluation:
+     - script[type="application/ld+json"]
+     - window.__NEXT_DATA__, window.__INITIAL_STATE__, window.__PRELOADED_STATE__ (if present)
+   - Use DOM fallback only when needed (title/price/breadcrumbs/shop name).
 
-Output requirements:
-- Output ONLY a single JSON object.
-- JSON must include: url, status, captured_at (ISO8601 or timestamp string)
-- If status != "ok", include "error" describing what you saw.
+Output contract (JSON ONLY, no markdown, no extra keys):
+{
+  "url": "string",
+  "status": "ok | needs_manual | error",
+  "captured_at": "ISO-8601 UTC timestamp",
+  "notes": "string (required when status=needs_manual)",
+  "error": "string (required when status=error)",
+
+  "source": "shopee",
+  "source_ids": { "platform": "shopee", "shop_id": "digits", "item_id": "digits" },
+
+  "shop": { "name": "string" },
+  "product": { "title": "string", "subtitle": "string (optional)", "description": "string" },
+
+  "images": [ { "url": "string", "position": 0 } ],
+  "categories": [ { "name": "string", "url": "string (optional)", "tier": 1 } ],
+
+  "pricing": {
+    "currency": "string (e.g., TWD)",
+    "sale_price_min": "number or numeric string",
+    "sale_price_max": "number or numeric string",
+    "retail_price_min": "number or numeric string (optional)",
+    "retail_price_max": "number or numeric string (optional)",
+    "shipping_fee_min": "number or numeric string (optional)",
+    "shipping_fee_max": "number or numeric string (optional)"
+  },
+
+  "models": [
+    {
+      "name": "string",
+      "sku": "string (optional)",
+      "available_stock": 0,
+      "purchase_limit": 0,
+      "sale_price": "number or numeric string (optional)",
+      "retail_price": "number or numeric string (optional)",
+      "shipping_weight_kg": "number or numeric string (optional)",
+      "actual_weight_kg": "number or numeric string (optional)"
+    }
+  ]
+}
+
+Rules:
+- If status="ok": include source, source_ids, product (title+description), images (>=1), pricing (currency + sale_price_min/max).
+  - Include shop/categories/models when available; omit optional objects/arrays if you cannot extract them reliably.
+- If status="needs_manual": include notes describing the wall; include source_ids if you can parse them from the URL.
+- If status="error": include error (string) with the failure reason; include source_ids if known.
+- Normalize all prices/fees:
+  - Strip currency symbols, commas, spaces; keep only digits and an optional decimal point.
+  - If the page shows a range, set *_min and *_max accordingly; otherwise set both to the same value.
+- Prefer stable extraction:
+  - Use embedded JSON/state when possible; otherwise use DOM text as fallback.

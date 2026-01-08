@@ -59,3 +59,8 @@ make docker-shell
 Then run the Codex auth/login command you normally use; the resulting files should land under `./codex/.codex/`.
 
 If you see `Not inside a trusted directory and --skip-git-repo-check was not specified.`, keep `CODEX_SKIP_GIT_REPO_CHECK=1` in `.env`.
+
+## Engineering TODOs
+
+- [ ] Organize it with viper + cobra + fx
+- [ ] Determine url whether it's taobao or shopee 執行 corresponding chrome mcp crawler context.
