@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -55,7 +54,7 @@ func newRootCmd() *cobra.Command {
 	}
 
 	rootCmd.Flags().StringVar(&url, "url", "", "Shopee product URL")
-	rootCmd.Flags().StringVar(&promptFile, "prompt-file", filepath.Join("config", "prompt.product.txt"), "Prompt template file path")
+	rootCmd.Flags().StringVar(&promptFile, "prompt-file", "", "Prompt template file path (optional; auto-selected by URL when empty)")
 	rootCmd.Flags().StringVar(&outDir, "out-dir", "out", "Output directory for result JSON")
 	rootCmd.Flags().StringVar(&codexCmd, "codex-cmd", envutil.String(os.Getenv, "CODEX_CMD", "codex"), "Codex CLI command name/path")
 

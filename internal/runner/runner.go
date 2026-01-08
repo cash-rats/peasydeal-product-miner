@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"peasydeal-product-miner/internal/crawler"
 	"peasydeal-product-miner/internal/source"
 )
 
@@ -35,9 +36,6 @@ func RunOnce(opts Options) (string, Result, error) {
 	if strings.TrimSpace(opts.URL) == "" {
 		return "", nil, fmt.Errorf("missing URL")
 	}
-	if strings.TrimSpace(opts.PromptFile) == "" {
-		return "", nil, fmt.Errorf("missing PromptFile")
-	}
 	if strings.TrimSpace(opts.OutDir) == "" {
 		return "", nil, fmt.Errorf("missing OutDir")
 	}
@@ -49,13 +47,27 @@ func RunOnce(opts Options) (string, Result, error) {
 		return "", nil, err
 	}
 
-	if _, err := source.Detect(opts.URL); err != nil {
+	src, err := source.Detect(opts.URL)
+	if err != nil {
 		r := errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, r)
 		if werr != nil {
 			return "", r, werr
 		}
 		return outPath, r, err
+	}
+
+	if strings.TrimSpace(opts.PromptFile) == "" {
+		c, err := crawler.ForSource(src)
+		if err != nil {
+			r := errorResult(opts.URL, err)
+			outPath, werr := writeResult(opts.OutDir, r)
+			if werr != nil {
+				return "", r, werr
+			}
+			return outPath, r, err
+		}
+		opts.PromptFile = c.DefaultPromptFile()
 	}
 
 	prompt, err := loadPrompt(opts.PromptFile, opts.URL)
@@ -176,7 +188,7 @@ func errorResult(url string, err error) Result {
 
 func writeResult(outDir string, r Result) (string, error) {
 	ts := time.Now().UTC().Format("20060102T150405Z")
-	outPath := filepath.Join(outDir, ts+".json")
+	outPath := filepath.Join(outDir, ts+"_"+resultSource(r)+".json")
 	b, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
 		return "", err
@@ -186,6 +198,15 @@ func writeResult(outDir string, r Result) (string, error) {
 		return "", err
 	}
 	return outPath, nil
+}
+
+func resultSource(r Result) string {
+	rawURL, _ := r["url"].(string)
+
+	if detected, err := source.Detect(rawURL); err == nil && detected != "" {
+		return string(detected)
+	}
+	return "unknown"
 }
 
 // setdefault mimics Python's dict.setdefault.

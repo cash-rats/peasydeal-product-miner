@@ -1,0 +1,39 @@
+You are controlling an already-running Google Chrome via Chrome DevTools.
+
+Goal: extract a minimal product payload (title + price) from a Shopee product page as fast as possible.
+
+Task:
+1) Navigate to this Shopee product URL: {{URL}}
+2) Wait until the page is ready:
+   - document.readyState === "complete", AND
+   - a product title is present OR a visible price is present OR page contains embedded product JSON/state.
+3) Detect blocking walls early:
+   - If the page shows login / verification / CAPTCHA (e.g., "登入", "登錄", "驗證", "captcha", "robot", slider verification),
+     return status="needs_manual" with notes explaining what you saw.
+4) Extract data (minimal):
+   - Prefer embedded JSON/state if it is easy to access; otherwise use DOM text.
+   - Extract:
+     - product title (string)
+     - sale price (number or numeric string; if a range is shown, use the minimum)
+     - currency (string, e.g., "TWD") if visible/obvious; otherwise omit.
+
+Output contract (JSON ONLY, no markdown, no extra keys):
+{
+  "url": "string",
+  "status": "ok | needs_manual | error",
+  "captured_at": "ISO-8601 UTC timestamp",
+  "notes": "string (required when status=needs_manual)",
+  "error": "string (required when status=error)",
+  "title": "string",
+  "price": "number or numeric string",
+  "currency": "string (optional, e.g., TWD)"
+}
+
+Rules:
+- If status="ok": include title and price (and currency when obvious).
+- If status="needs_manual": include notes describing the wall.
+- If status="error": include error (string) with the failure reason.
+- Normalize price:
+  - Strip currency symbols, commas, spaces; keep only digits and an optional decimal point.
+  - If the page shows a range, use the minimum.
+

@@ -19,5 +19,4 @@ services:
       sh -lc
       '/app/runner
       --url "${TARGET_URL}"
-      --prompt-file /app/config/prompt.product.txt
       --out-dir /out'
