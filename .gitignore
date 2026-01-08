@@ -19,3 +19,6 @@
 # Python (optional tooling)
 __pycache__/
 *.pyc
+
+# Supabase
+supabase/.temp/
