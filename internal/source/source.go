@@ -32,4 +32,3 @@ func Detect(rawURL string) (Source, error) {
 		return "", fmt.Errorf("unsupported URL host %q (only Shopee and Taobao are supported)", host)
 	}
 }
-

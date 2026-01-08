@@ -8,8 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"peasydeal-product-miner/internal/crawler"
 	runnerPkg "peasydeal-product-miner/internal/runner"
 	"peasydeal-product-miner/internal/envutil"
+	"peasydeal-product-miner/internal/source"
 )
 
 func newOnceCmd() *cobra.Command {
@@ -25,6 +27,24 @@ func newOnceCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if strings.TrimSpace(url) == "" {
 				return errors.New("missing required flag: --url")
+			}
+
+			if detected, err := source.Detect(url); err == nil {
+				fmt.Fprintf(cmd.ErrOrStderr(), "Crawling source: %s\n", detected)
+				if strings.TrimSpace(promptFile) == "" {
+					if c, err := crawler.ForSource(detected); err == nil {
+						fmt.Fprintf(cmd.ErrOrStderr(), "Using prompt: %s (auto)\n", c.DefaultPromptFile())
+					}
+				} else {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Using prompt: %s\n", promptFile)
+				}
+			} else {
+				fmt.Fprintf(cmd.ErrOrStderr(), "Crawling source: unsupported\n")
+				if strings.TrimSpace(promptFile) != "" {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Using prompt: %s\n", promptFile)
+				} else {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Using prompt: (auto)\n")
+				}
 			}
 
 			outPath, _, err := runnerPkg.RunOnce(runnerPkg.Options{
