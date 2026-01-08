@@ -28,7 +28,7 @@ dev-doctor:
 	go run ./cmd/devtool doctor
 
 .PHONY: dev-once
-dev-once:
+dev-once: dev-doctor
 	@URL="$(word 2,$(MAKECMDGOALS))"; \
 	go run ./cmd/devtool once --url "$$URL"
 
