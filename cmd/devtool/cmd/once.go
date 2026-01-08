@@ -38,6 +38,9 @@ func newOnceCmd() *cobra.Command {
 			if outPath != "" {
 				fmt.Println(outPath)
 			}
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "ERROR:", err)
+			}
 			// If we managed to write an output file, treat crawl errors as non-fatal.
 			if err != nil && outPath == "" {
 				return err
@@ -51,4 +54,3 @@ func newOnceCmd() *cobra.Command {
 	cmd.Flags().StringVar(&outDir, "out-dir", "out", "Output directory for result JSON")
 	return cmd
 }
-

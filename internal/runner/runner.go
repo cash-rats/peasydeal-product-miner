@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"peasydeal-product-miner/internal/source"
 )
 
 var allowedStatus = map[string]bool{
@@ -45,6 +47,15 @@ func RunOnce(opts Options) (string, Result, error) {
 
 	if err := os.MkdirAll(opts.OutDir, 0o755); err != nil {
 		return "", nil, err
+	}
+
+	if _, err := source.Detect(opts.URL); err != nil {
+		r := errorResult(opts.URL, err)
+		outPath, werr := writeResult(opts.OutDir, r)
+		if werr != nil {
+			return "", r, werr
+		}
+		return outPath, r, err
 	}
 
 	prompt, err := loadPrompt(opts.PromptFile, opts.URL)
