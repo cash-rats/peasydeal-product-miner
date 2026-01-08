@@ -2,6 +2,37 @@
 
 This repo is a self-contained, deployable crawler bundle.
 
+## Chrome DevTools MCP (Codex ↔ Chrome)
+
+Codex doesn’t talk to Chrome directly. It talks to an **MCP server** over stdio, and that MCP server talks to a **running Chrome** over the DevTools debug port (`9222`).
+
+### 1) Start Chrome with a dedicated “MCP profile” + debug port
+
+Chrome 136+ requires a **non-default** `--user-data-dir` for remote debugging to work reliably.
+
+```bash
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir=/tmp/chrome-mcp-profile
+```
+
+Verify on the host:
+- `http://127.0.0.1:9222/json/version`
+
+Use `make dev-chrome`  directive to launch chrome for codex to perform crawling via chrome MCP server.
+
+### 2) Add Chrome DevTools MCP to Codex (connect to that Chrome)
+
+This writes an MCP entry into your Codex config (typically `~/.codex/config.toml` on the host):
+
+```bash
+codex mcp add chrome-devtools-mcp -- \
+  npx -y chrome-devtools-mcp@latest --browser-url=http://127.0.0.1:9222
+```
+
+If you’re running Codex **inside Docker**, the DevTools URL must point at the host:
+- Docker Desktop: `http://host.docker.internal:9222`
+
 ## Quickstart (development)
 
 1) Start Chrome with a dedicated profile + DevTools port:
@@ -47,6 +78,10 @@ Requires Go 1.22+ installed. Local runs use your host `codex` configuration in `
 cp .env.example .env
 make docker-once TARGET_URL="https://shopee.tw/..."
 ```
+
+How Docker talks to host Chrome:
+- The runner image includes **Node.js + Codex CLI** (see `Dockerfile`), and runs an MCP server via `npx chrome-devtools-mcp@latest`.
+- The container’s Codex config is persisted at `./codex/.codex/config.toml` (mounted as `HOME=/codex`), and points the MCP server at the host’s DevTools endpoint (`host.docker.internal:9222`, or an equivalent resolved IP).
 
 ## Codex auth in Docker
 
