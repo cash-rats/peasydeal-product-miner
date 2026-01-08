@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -50,7 +49,7 @@ func newOnceCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&url, "url", "", "Shopee product URL")
-	cmd.Flags().StringVar(&promptFile, "prompt-file", filepath.Join("config", "prompt.product.txt"), "Prompt template file path")
+	cmd.Flags().StringVar(&promptFile, "prompt-file", "", "Prompt template file path (optional; auto-selected by URL when empty)")
 	cmd.Flags().StringVar(&outDir, "out-dir", "out", "Output directory for result JSON")
 	return cmd
 }
