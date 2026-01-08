@@ -43,6 +43,9 @@ func newRootCmd() *cobra.Command {
 			if outPath != "" {
 				fmt.Fprintln(cmd.OutOrStdout(), outPath)
 			}
+			if err != nil {
+				fmt.Fprintln(cmd.ErrOrStderr(), "ERROR:", err)
+			}
 			// Preserve prior behavior: if an output file was produced, treat crawl errors as non-fatal.
 			if err != nil && outPath == "" {
 				return err
@@ -63,4 +66,3 @@ func newRootCmd() *cobra.Command {
 
 	return rootCmd
 }
-
