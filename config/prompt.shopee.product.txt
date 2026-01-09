@@ -21,6 +21,7 @@ Task:
    - Extract:
      - product title (string)
      - sale price (number or numeric string; if a range is shown, use the minimum)
+     - product description (string; plain text)
      - currency (string, e.g., "TWD") if visible/obvious; otherwise omit.
 
    Procedure: product title (fast + reliable)
@@ -45,8 +46,24 @@ Task:
      - Choose the sale price:
        - If a range is shown (e.g., `$1,089 - $1,299`), take the minimum.
        - If multiple candidates exist (sale + original), prefer the one closest to the title vertically and not strikethrough.
-     - Currency:
+       - Currency:
        - `"TWD"` if `NT$` appears or the page is `shopee.tw` and the symbol is `$`; otherwise omit if ambiguous.
+
+   Procedure: product description (fast + reliable)
+   - Primary: structured data in `script[type="application/ld+json"]`:
+     - Parse each ld+json block (some may be arrays or contain `@graph`).
+     - Find an object where `@type === "Product"` and `description` is a non-empty string.
+     - Return that `description` as plain text.
+       - Normalize whitespace: trim, collapse excessive whitespace; keep meaningful punctuation.
+   - Fallback: DOM section text:
+     - Find a visible heading/tab labeled `"商品描述"` (sometimes `"商品詳情"` contains the long text too).
+     - If the section is collapsed, click an expand control like `"查看更多"` / `"顯示更多"` near that section.
+     - Read the nearest section/container text under that heading.
+     - Clean it:
+       - Remove the heading label itself.
+       - De-duplicate repeated blocks if the UI repeats text.
+       - Trim; collapse runs of whitespace to single spaces (or keep `\n` if the text is clearly multi-paragraph).
+   - If both methods fail but the page is otherwise OK, set description to an empty string ONLY if you are sure no description exists; otherwise return status="error" with why you couldn’t locate it.
 
 5) Extract product images (from the image viewer modal RIGHT sidebar thumbnails):
    Goal: return the list of product image thumbnail URLs that show on the right side of Shopee's image viewer modal.
@@ -117,6 +134,7 @@ Output contract (JSON ONLY, no markdown):
   "notes": "string (required when status=needs_manual)",
   "error": "string (required when status=error)",
   "title": "string",
+  "description": "string",
   "price": "number or numeric string",
   "currency": "string (optional, e.g., TWD)",
   "images": [
@@ -136,7 +154,7 @@ Output contract (JSON ONLY, no markdown):
 }
 
 Rules:
-- If status="ok": include title and price (and currency when obvious).
+- If status="ok": include title, description, and price (and currency when obvious).
 - If status="needs_manual": include notes describing the wall.
 - If status="error": include error (string) with the failure reason.
 - Do NOT output placeholder type-descriptions like "string" or "boolean" as values; output real values with correct JSON types.
