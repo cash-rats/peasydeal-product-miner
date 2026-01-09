@@ -24,46 +24,25 @@ Task:
      - product description (string; plain text)
      - currency (string, e.g., "TWD") if visible/obvious; otherwise omit.
 
-   Procedure: product title (fast + reliable)
-   - Primary: DOM `h1` (Shopee PDP renders product title as the only prominent heading).
-     - In JS: `const title = document.querySelector('main h1, [role="main"] h1, h1')?.innerText?.trim()`
-     - If multiple h1 exist, prefer the one that is visible and has the longest non-empty text.
-   - Fallback: `meta[property="og:title"]` content (trim trailing site name if present).
-   - Last resort: parse `document.title` and take the part before `" | "` (Shopee commonly formats as `<title>... | 蝦皮購物</title>`).
-
-   Procedure: product sale price (fast + reliable)
-   - Primary: structured data in `script[type="application/ld+json"]`:
-     - Parse all ld+json blocks; look for an object with `@type: "Product"` and an `offers` field.
-     - Use `offers.price` (or min of `offers.lowPrice/highPrice` if a range object is provided).
-     - Currency: `offers.priceCurrency` when present.
-   - Fallback: visible DOM text near the title (avoid scanning the entire page):
-     - Get the title element (`h1`) and treat its closest product container as the search root:
-       - `const root = titleEl?.closest('main') || document.querySelector('main') || document.body`
-     - Collect candidate text nodes/elements inside `root` that look like a price:
-       - Matches like `$1,089`, `NT$1,089`, `1,089` (when a nearby currency symbol exists).
-     - Exclude likely "original" (strikethrough) prices:
-       - ignore elements inside `<del>` / `<s>` or with computed `textDecorationLine` including `"line-through"`.
-     - Choose the sale price:
-       - If a range is shown (e.g., `$1,089 - $1,299`), take the minimum.
-       - If multiple candidates exist (sale + original), prefer the one closest to the title vertically and not strikethrough.
-       - Currency:
-       - `"TWD"` if `NT$` appears or the page is `shopee.tw` and the symbol is `$`; otherwise omit if ambiguous.
-
-   Procedure: product description (fast + reliable)
-   - Primary: structured data in `script[type="application/ld+json"]`:
-     - Parse each ld+json block (some may be arrays or contain `@graph`).
-     - Find an object where `@type === "Product"` and `description` is a non-empty string.
-     - Return that `description` as plain text.
-       - Normalize whitespace: trim, collapse excessive whitespace; keep meaningful punctuation.
-   - Fallback: DOM section text:
-     - Find a visible heading/tab labeled `"商品描述"` (sometimes `"商品詳情"` contains the long text too).
-     - If the section is collapsed, click an expand control like `"查看更多"` / `"顯示更多"` near that section.
-     - Read the nearest section/container text under that heading.
-     - Clean it:
-       - Remove the heading label itself.
-       - De-duplicate repeated blocks if the UI repeats text.
-       - Trim; collapse runs of whitespace to single spaces (or keep `\n` if the text is clearly multi-paragraph).
-   - If both methods fail but the page is otherwise OK, set description to an empty string ONLY if you are sure no description exists; otherwise return status="error" with why you couldn’t locate it.
+   Procedure (fast): retrieve title + price + description in ONE evaluate_script
+   - In a single evaluate_script call, do this in order:
+     1) Parse `script[type="application/ld+json"]` and extract from `@type === "Product"`:
+        - `title`: `name` (fallback: `headline`)
+        - `description`: `description`
+        - `price`: `offers.price` (or min of `offers.lowPrice/highPrice` when present)
+        - `currency`: `offers.priceCurrency` (if present)
+        - Notes:
+          - Some ld+json blocks are arrays or contain `@graph`; search all of them.
+          - Clean title/description: trim + collapse repeated whitespace.
+     2) Minimal DOM fallbacks ONLY if any field is missing:
+        - `title`: first visible `main h1` (fallback `h1`).
+        - `price`: nearest visible price-like text (contains `$` or `NT$`) inside `main`,
+          excluding `<del>/<s>` and anything with computed `textDecorationLine` containing `"line-through"`;
+          if a range, take the minimum.
+        - `description`: find a visible `"商品描述"` heading and take the nearest container text under it
+          (click `"查看更多"` / `"顯示更多"` if present).
+     3) If the page is not blocked and you still cannot get non-empty `title` OR non-empty `description` OR a valid `price`,
+        return status="error" with a short reason (what was missing / which method failed).
 
 5) Extract product images (from the image viewer modal RIGHT sidebar thumbnails):
    Goal: return the list of product image thumbnail URLs that show on the right side of Shopee's image viewer modal.
