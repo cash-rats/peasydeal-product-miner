@@ -17,11 +17,36 @@ Task:
    - If the page shows login / verification / CAPTCHA (e.g., "登入", "登錄", "驗證", "captcha", "robot", slider verification),
      return status="needs_manual" with notes explaining what you saw.
 4) Extract data (minimal product fields):
-   - Prefer embedded JSON/state if it is easy to access; otherwise use DOM text.
+   - Prefer embedded structured data (ld+json) if it is easy to access; otherwise use DOM text.
    - Extract:
      - product title (string)
      - sale price (number or numeric string; if a range is shown, use the minimum)
      - currency (string, e.g., "TWD") if visible/obvious; otherwise omit.
+
+   Procedure: product title (fast + reliable)
+   - Primary: DOM `h1` (Shopee PDP renders product title as the only prominent heading).
+     - In JS: `const title = document.querySelector('main h1, [role="main"] h1, h1')?.innerText?.trim()`
+     - If multiple h1 exist, prefer the one that is visible and has the longest non-empty text.
+   - Fallback: `meta[property="og:title"]` content (trim trailing site name if present).
+   - Last resort: parse `document.title` and take the part before `" | "` (Shopee commonly formats as `<title>... | 蝦皮購物</title>`).
+
+   Procedure: product sale price (fast + reliable)
+   - Primary: structured data in `script[type="application/ld+json"]`:
+     - Parse all ld+json blocks; look for an object with `@type: "Product"` and an `offers` field.
+     - Use `offers.price` (or min of `offers.lowPrice/highPrice` if a range object is provided).
+     - Currency: `offers.priceCurrency` when present.
+   - Fallback: visible DOM text near the title (avoid scanning the entire page):
+     - Get the title element (`h1`) and treat its closest product container as the search root:
+       - `const root = titleEl?.closest('main') || document.querySelector('main') || document.body`
+     - Collect candidate text nodes/elements inside `root` that look like a price:
+       - Matches like `$1,089`, `NT$1,089`, `1,089` (when a nearby currency symbol exists).
+     - Exclude likely "original" (strikethrough) prices:
+       - ignore elements inside `<del>` / `<s>` or with computed `textDecorationLine` including `"line-through"`.
+     - Choose the sale price:
+       - If a range is shown (e.g., `$1,089 - $1,299`), take the minimum.
+       - If multiple candidates exist (sale + original), prefer the one closest to the title vertically and not strikethrough.
+     - Currency:
+       - `"TWD"` if `NT$` appears or the page is `shopee.tw` and the symbol is `$`; otherwise omit if ambiguous.
 
 5) Extract product images (from the image viewer modal RIGHT sidebar thumbnails):
    Goal: return the list of product image thumbnail URLs that show on the right side of Shopee's image viewer modal.
