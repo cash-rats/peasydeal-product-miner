@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,6 +28,8 @@ type Options struct {
 	PromptFile string
 	OutDir     string
 	CodexCmd   string
+	// CodexModel passes `--model` to Codex CLI when non-empty.
+	CodexModel string
 	// SkipGitRepoCheck passes `--skip-git-repo-check` to Codex CLI.
 	// This is useful in containers or non-git directories.
 	SkipGitRepoCheck bool
@@ -80,7 +83,7 @@ func RunOnce(opts Options) (string, Result, error) {
 		return outPath, r, err
 	}
 
-	raw, err := runCodex(opts.CodexCmd, opts.SkipGitRepoCheck, prompt)
+	raw, err := runCodex(opts.CodexCmd, opts.CodexModel, opts.SkipGitRepoCheck, opts.URL, prompt)
 	if err != nil {
 		r := errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, r)
@@ -127,14 +130,24 @@ func loadPrompt(promptPath string, url string) (string, error) {
 	return strings.ReplaceAll(string(b), "{{URL}}", url), nil
 }
 
-func runCodex(codexCmd string, skipGitRepoCheck bool, prompt string) (string, error) {
+func runCodex(codexCmd string, codexModel string, skipGitRepoCheck bool, url string, prompt string) (string, error) {
 	// Codex CLI expects exec-scoped flags after the subcommand:
 	//   codex exec --skip-git-repo-check "<prompt>"
 	args := []string{"exec"}
 	if skipGitRepoCheck {
 		args = append(args, "--skip-git-repo-check")
 	}
+	if strings.TrimSpace(codexModel) != "" {
+		args = append(args, "--model", codexModel)
+	}
 	args = append(args, prompt)
+
+	start := time.Now()
+	if strings.TrimSpace(codexModel) != "" {
+		log.Printf("⏱️ crawl started url=%s model=%s", url, codexModel)
+	} else {
+		log.Printf("⏱️ crawl started url=%s", url)
+	}
 	cmd := exec.Command(codexCmd, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -144,8 +157,10 @@ func runCodex(codexCmd string, skipGitRepoCheck bool, prompt string) (string, er
 		if msg == "" {
 			msg = err.Error()
 		}
+		log.Printf("⏱️ crawl failed url=%s duration=%s err=%s", url, time.Since(start).Round(time.Millisecond), msg)
 		return "", fmt.Errorf("codex exec failed: %s", msg)
 	}
+	log.Printf("⏱️ crawl finished url=%s duration=%s", url, time.Since(start).Round(time.Millisecond))
 	return strings.TrimSpace(stdout.String()), nil
 }
 

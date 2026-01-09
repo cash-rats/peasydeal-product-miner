@@ -1,6 +1,12 @@
 You are controlling an already-running Google Chrome via Chrome DevTools.
 
-Goal: extract a minimal product payload (title + price) from a Shopee product page as fast as possible.
+Goal: extract a minimal product payload (title + price) AND crawl variation options with their corresponding main image URLs from a Shopee product page as fast as possible.
+
+Performance rules (important):
+- Minimize tool round-trips: prefer 1 navigation + 1-2 evaluate_script calls total.
+- Do NOT scroll the whole page, do NOT take screenshots unless blocked.
+- Do NOT scan the entire DOM for prices/options; use targeted selectors below.
+  - If possible, combine steps (4)-(6) into a single evaluate_script; otherwise use 2 evaluate_script calls (images first, then variations).
 
 Task:
 1) Navigate to this Shopee product URL: {{URL}}
@@ -10,14 +16,75 @@ Task:
 3) Detect blocking walls early:
    - If the page shows login / verification / CAPTCHA (e.g., "登入", "登錄", "驗證", "captcha", "robot", slider verification),
      return status="needs_manual" with notes explaining what you saw.
-4) Extract data (minimal):
+4) Extract data (minimal product fields):
    - Prefer embedded JSON/state if it is easy to access; otherwise use DOM text.
    - Extract:
      - product title (string)
      - sale price (number or numeric string; if a range is shown, use the minimum)
      - currency (string, e.g., "TWD") if visible/obvious; otherwise omit.
 
-Output contract (JSON ONLY, no markdown, no extra keys):
+5) Extract product images (from the image viewer modal RIGHT sidebar thumbnails):
+   Goal: return the list of product image thumbnail URLs that show on the right side of Shopee's image viewer modal.
+
+   Observed behavior on Shopee PDP:
+   - Clicking a product thumbnail (or the main image) opens an image viewer modal overlay.
+   - The modal has a right-side column with a scrollable grid/list of thumbnails.
+   - Those thumbnail URLs typically look like:
+     - https://down-tw.img.susercontent.com/file/<image_id>@resize_w82_nl.webp
+
+   Step-by-step procedure (implement inside ONE evaluate_script):
+   A) Open the image viewer modal:
+      - Try clicking the main gallery image: img[alt^="Product image"] (or its closest clickable parent).
+      - If no modal appears, click the first gallery thumbnail below the main image (query for nearby img elements under the gallery).
+      - Wait until a modal exists: document.querySelector('[role="dialog"]') is present and visible.
+      - If a blocking wall appears (login/verify/CAPTCHA), return status="needs_manual".
+      - If the modal cannot be opened after reasonable attempts, return status="error".
+
+   B) Identify the RIGHT thumbnail list container inside the modal:
+      - const dialog = document.querySelector('[role="dialog"]')
+      - Find a scrollable element inside dialog:
+        - Look for elements where getComputedStyle(el).overflowY is "auto" or "scroll"
+        - Prefer candidates whose bounding rect is on the right half of the dialog (rect.left > dialogRect.left + dialogRect.width * 0.55)
+        - Fallback to any scrollable element with a tall height if the right-half heuristic fails.
+
+   C) Collect ALL thumbnail URLs by scrolling the right sidebar container:
+      - Define a collector that:
+        - iterates dialog.querySelectorAll('img') (or sidebarContainer.querySelectorAll('img') if you found it)
+        - reads img.currentSrc || img.src and parses img.srcset
+        - filters to URLs containing "down-tw.img.susercontent.com/file/" AND "@resize_w82_nl.webp"
+        - de-duplicates while PRESERVING first-seen order
+      - If a scrollable sidebar container is found:
+        - scrollTop from 0 -> max in ~10-12 steps
+        - after each scroll step, wait 200-300ms then collect again
+        - finally scrollTop back to 0
+      - Result: `images` should be an array of objects:
+        - { url: string, position: integer } where position is 0-based in the preserved order
+
+6) Extract variation options and the corresponding main image URL for each option:
+   Context observed on Shopee PDP:
+   - Variation section label is often shown as a heading like "規格" (but could also be "顏色", "尺寸", "款式", etc.)
+   - Options are usually rendered as <button> elements styled as selection boxes.
+     Practical selectors/patterns:
+       - option button has an aria-label (e.g., "白", "灰")
+       - option button className often contains "selection-box"
+       - selected option button className often contains "selection-box-selected"
+       - unavailable options may have aria-disabled="true" (note: in practice it can still be clickable and still updates the main image)
+   - The main product image is shown near the top-left gallery:
+       - main image element: img[alt^="Product image"]
+       - it is usually inside a <picture>; prefer the largest URL from <source srcset> (often the "2x" / w900 URL)
+
+   Step-by-step procedure:
+   Prefer implementing this as ONE evaluate_script that:
+   - Locates variation option buttons (near headings like: "規格","顏色","尺寸","款式","型號","容量","組合")
+   - For each option button:
+     - reads option name from aria-label (preferred) or innerText
+     - reads availability from aria-disabled / disabled
+     - clicks the button (even if aria-disabled="true")
+     - waits for the main image (img[alt^="Product image"]) to update (alt or src change)
+     - captures image_url as the largest URL from the <source srcset> (prefer 2x/w900), fallback to img.currentSrc/img.src
+   - Returns an array of {group, option, available, image_url}.
+
+Output contract (JSON ONLY, no markdown):
 {
   "url": "string",
   "status": "ok | needs_manual | error",
@@ -26,14 +93,36 @@ Output contract (JSON ONLY, no markdown, no extra keys):
   "error": "string (required when status=error)",
   "title": "string",
   "price": "number or numeric string",
-  "currency": "string (optional, e.g., TWD)"
+  "currency": "string (optional, e.g., TWD)",
+  "images": [
+    {
+      "url": "string",
+      "position": 0
+    }
+  ],
+  "variation_images": [
+    {
+      "group": "string (e.g., 規格)",
+      "option": "string (e.g., 白)",
+      "available": "boolean",
+      "image_url": "string"
+    }
+  ]
 }
 
 Rules:
 - If status="ok": include title and price (and currency when obvious).
 - If status="needs_manual": include notes describing the wall.
 - If status="error": include error (string) with the failure reason.
+- Do NOT output placeholder type-descriptions like "string" or "boolean" as values; output real values with correct JSON types.
 - Normalize price:
   - Strip currency symbols, commas, spaces; keep only digits and an optional decimal point.
   - If the page shows a range, use the minimum.
-
+- images:
+  - Return 1+ entries when status="ok" (empty only if the page truly has no images).
+  - Prefer the modal right-sidebar thumbnail URLs matching `@resize_w82_nl.webp`.
+  - De-duplicate while preserving first-seen order; set `position` accordingly.
+- variation_images:
+   - Include 0+ entries (empty array if no variations are present).
+   - De-duplicate by (group, option).
+   - image_url must be the post-click main image URL for that option (prefer the largest srcset URL when available).
