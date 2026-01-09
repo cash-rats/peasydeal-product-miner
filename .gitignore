@@ -1,4 +1,5 @@
 .DS_Store
+.cache/
 
 # Local env (docker compose reads this)
 .env

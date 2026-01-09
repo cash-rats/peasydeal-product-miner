@@ -66,6 +66,7 @@ Results land in `out/`.
 - `CHROME_DEBUG_PORT` (default `9222`): DevTools port used by `cmd/devtool`
 - `CHROME_PROFILE_DIR` (default `$HOME/chrome-mcp-profiles/shopee`): dedicated Chrome profile directory for crawling
 - `CODEX_CMD` (default `codex`): Codex CLI command used by the runner
+- `CODEX_MODEL` (optional): pass `--model` to `codex exec` (use a faster model to reduce crawl latency)
 - `TARGET_URL` (Docker): URL used by `docker compose` / `make docker-once`
 
 ## Docker (Deployment Parity Check)
