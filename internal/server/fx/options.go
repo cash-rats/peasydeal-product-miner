@@ -23,7 +23,7 @@ type hooksParams struct {
 
 	Lifecycle fx.Lifecycle
 	Config    config.Config
-	Logger    *zap.Logger
+	Logger    *zap.SugaredLogger
 	Server    *http.Server
 }
 
@@ -32,7 +32,7 @@ func registerLifecycleHooks(p hooksParams) {
 
 	p.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			p.Logger.Info("http_server_starting", zap.String("addr", p.Server.Addr))
+			p.Logger.Infow("http_server_starting", "addr", p.Server.Addr)
 
 			var err error
 			ln, err = net.Listen("tcp", p.Server.Addr)
@@ -43,14 +43,14 @@ func registerLifecycleHooks(p hooksParams) {
 			go func() {
 				err := p.Server.Serve(ln)
 				if err != nil && err != http.ErrServerClosed {
-					p.Logger.Error("http_server_listen_failed", zap.Error(err))
+					p.Logger.Errorw("http_server_listen_failed", "err", err)
 				}
 			}()
 
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			p.Logger.Info("http_server_stopping")
+			p.Logger.Infow("http_server_stopping")
 
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()

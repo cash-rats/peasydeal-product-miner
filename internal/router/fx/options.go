@@ -20,7 +20,7 @@ type muxParams struct {
 	fx.In
 
 	Logger   *zap.SugaredLogger
-	Handlers []router.Handler `group:"routes"`
+	Handlers []router.Handler `group:"handlers"`
 }
 
 func NewMux(p muxParams) *chi.Mux {
