@@ -21,4 +21,3 @@ func ForSource(s source.Source) (Crawler, error) {
 		return nil, fmt.Errorf("unsupported source %q", s)
 	}
 }
-
