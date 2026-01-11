@@ -4,6 +4,29 @@ This document defines a conservative, reusable boilerplate/template plan for dep
 
 The key change vs Vercel: the process is **long-lived**, so we **bootstrap FX once** at startup and run an `http.Server` until shutdown.
 
+## Document Status (Normative When Referenced)
+
+When a human asks to “initialize/adopt/migrate this repo to `architecture/vps-go-fx-template.md`”, treat this document as a **spec**, not an inspiration.
+
+Normative terms:
+- **MUST / MUST NOT**: non-negotiable requirements.
+- **SHOULD / SHOULD NOT**: strong defaults; deviate only with explicit human instruction.
+- **MAY**: optional.
+
+Rules to prevent architecture drift:
+- When this document specifies an exact filename, package path, route, or Makefile target name, agents **MUST implement it verbatim**.
+- Agents **MUST NOT introduce alternative names/paths/aliases** “for convenience” (e.g. adding `make server` when the spec says `make start`) unless explicitly asked by the human.
+- If a deviation seems beneficial, the agent **MUST ask first** and wait for confirmation.
+
+## Acceptance Criteria (Initialization)
+
+An “adoption/initialization” is only complete when all of these are true:
+- Entrypoint exists at `cmd/server/main.go` and boots FX **once** (long-lived process).
+- HTTP routing uses `chi`, and HTTP handlers implement `internal/router.Handler`.
+- At least one route exists: `GET /health` returns `200` and `{ "ok": true }` using `internal/pkg/render.ChiJSON`.
+- `make start` exists and runs `go run ./cmd/server` (no alternate targets unless explicitly requested).
+- `go test ./...` and `go build ./...` succeed without requiring Postgres/Redis (infra is optional/gated by env vars).
+
 ## 0) Inngest (prebuilt, optional)
 
 The VPS template should include an optional Inngest HTTP endpoint out of the box (same intent as the Vercel variant), implemented as a normal route on the long-lived server:
@@ -141,8 +164,12 @@ The server module depends on the constructed `*chi.Mux` and config/logger.
 
 ## 5) Makefile + Production Workflow
 
-Proposed Makefile targets:
-- `make start` runs `go run ./cmd/server`.
+Makefile targets (strict):
+- The Makefile **MUST** provide `start` which runs `go run ./cmd/server`.
+- The Makefile **MUST NOT** add synonyms/aliases (e.g. `server`) unless explicitly requested by the human.
+- Production targets **MAY** be added as described below.
+
+Production workflow (optional):
 - `make build/prod`, `make start/prod`, `make push/prod` use `docker-compose.prod.yaml`.
 
 ## 6) Minimal Example Domain (`health`)
@@ -171,3 +198,9 @@ Keep the same config approach (Viper + defaults). Typical vars:
   - `REDIS_PORT` (default: `6379`)
   - `REDIS_SCHEME` (default: `redis`, use `rediss` for TLS)
 
+## 8) Drift Prevention (Recommended)
+
+If you want to enforce the spec automatically (CI/pre-commit), add lightweight checks such as:
+- Verify `Makefile` contains a `start:` target and does not contain forbidden synonyms unless explicitly allowed.
+- Verify `cmd/server/main.go` exists.
+- Verify a `/health` route exists (e.g. by grepping for `r.Get(\"/health\"` or an integration test).

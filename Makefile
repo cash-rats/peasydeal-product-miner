@@ -11,6 +11,7 @@ endif
 help:
 	@printf "%s\n" \
 	"Targets:" \
+	"  make start                     Start long-lived HTTP server (/health)" \
 	"  make dev-chrome                 Start Chrome with DevTools enabled" \
 	"  make dev-doctor                 Check DevTools is reachable on localhost" \
 	"  make dev-once <product_url>     Crawl one URL on the host (fast loop)" \
@@ -18,6 +19,10 @@ help:
 	"  make docker-once <product_url>  Crawl one URL in Docker (parity check)" \
 	"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
 	"  make docker-login               Authorize host Codex for the Docker runner"
+
+.PHONY: start
+start:
+	go run ./cmd/server
 
 .PHONY: dev-chrome
 dev-chrome:

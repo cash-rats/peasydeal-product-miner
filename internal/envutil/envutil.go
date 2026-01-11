@@ -25,4 +25,3 @@ func Bool(getenv func(string) string, key string, def bool) bool {
 		return def
 	}
 }
-

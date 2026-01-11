@@ -125,3 +125,25 @@ Shopee sometimes shows a login/verify/CAPTCHA wall that is not reliably automata
 ## Safety
 
 Do not expose port `9222` to your LAN/Internet; a DevTools session can fully control the browser.
+
+## VPS HTTP Server (FX + chi)
+
+This repo also includes a long-lived HTTP server skeleton (Uber FX + chi) with a basic health endpoint.
+
+Run:
+
+```bash
+make start
+```
+
+Verify:
+
+```bash
+curl -sS http://127.0.0.1:8080/health
+```
+
+Optional env vars (all have defaults; Postgres/Redis are disabled unless configured):
+- `APP_PORT` (default `8080`)
+- `LOG_LEVEL` (default `info`)
+- Postgres (enabled only when `DB_HOST` + `DB_NAME` are set): `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`
+- Redis (enabled only when `REDIS_HOST` is set): `REDIS_USER`, `REDIS_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_SCHEME`
