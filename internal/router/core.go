@@ -12,7 +12,7 @@ type Handler interface {
 	Handle(w http.ResponseWriter, r *http.Request)
 }
 
-const routeGroupTag = `group:"routes"`
+const routeGroupTag = `group:"handlers"`
 
 func AsRoute(constructor any) fx.Option {
 	return fx.Provide(

@@ -9,14 +9,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 type httpServerParams struct {
 	fx.In
 
 	Config config.Config
-	Logger *zap.Logger
 	Router *chi.Mux
 }
 
