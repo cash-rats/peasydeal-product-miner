@@ -5,18 +5,28 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
 	"peasydeal-product-miner/config"
+
+	"github.com/go-chi/chi/v5"
+	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
-func NewHTTPServer(cfg config.Config, mux *chi.Mux) *http.Server {
+type httpServerParams struct {
+	fx.In
+
+	Config config.Config
+	Logger *zap.Logger
+	Router *chi.Mux
+}
+
+func NewHTTPServer(p httpServerParams) *http.Server {
 	return &http.Server{
-		Addr:              fmt.Sprintf(":%d", cfg.AppPort),
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
+		Addr:              fmt.Sprintf(":%d", p.Config.Port),
+		Handler:           p.Router,
 		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
 }

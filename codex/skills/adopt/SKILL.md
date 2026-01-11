@@ -16,6 +16,7 @@ Add the “long-lived `cmd/server` + FX wiring + chi router + per-domain handler
 - Do not delete or rename existing code unless explicitly asked.
 - Prefer additive changes and adapters/wrappers.
 - Keep baseline `go test ./...` and `go build ./...` working without requiring live Postgres/Redis (treat infra as optional/stubbed).
+- Deterministic infra: do not invent new DB/Redis packages/clients; reuse/copy the template’s `db/` and `cache/` implementations and keep the constructor names (`db.NewSQLXPostgresDB`, `cache.NewRedis`).
 - Keep the architecture conventions:
   - Long-lived entrypoint at `cmd/server/main.go`
   - FX app boots once and runs an `http.Server` with graceful shutdown
@@ -42,9 +43,13 @@ Add (or adapt to match existing packages):
 - `internal/server/http.go` + `internal/server/fx/options.go`: constructs `http.Server` and wires `fx.Lifecycle` start/stop.
 - `internal/pkg/render/render.go`: `ChiJSON` and `ChiErr` helpers (unwrapped JSON).
 
+If you can run the template’s adoption tool, prefer generating the scaffold instead of hand-writing it:
+- `go run github.com/huangc28/vps-go-fx-template/cmd/adopt@latest --dir . --scaffold`
+
 If the repo doesn’t already provide a zap logger/config via constructors, add minimal providers so FX can build:
 - Logger: provide `*zap.Logger` and `*zap.SugaredLogger`.
 - Config: Viper-backed typed config with defaults and zero required env vars.
+- DB/Redis: if you need them, copy the template `db/` and `cache/` packages rather than reimplementing.
 
 ### 3) Prove wiring with `/health`
 
@@ -82,4 +87,3 @@ Leave the repo in a state where:
 - Old entrypoints still work (unless explicitly removed).
 - New long-lived server works (`/health` at minimum).
 - There’s a clear “bridge handler” pattern to migrate further domains route-by-route.
-

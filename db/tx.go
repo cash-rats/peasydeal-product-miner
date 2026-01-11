@@ -1,30 +1,46 @@
 package db
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
 
-type TxFunc[T any] func(*sqlx.Tx) (T, error)
+type TxFunc func(tx *sqlx.Tx) (any, error)
 
-func Tx[T any](ctx context.Context, db *sqlx.DB, fn TxFunc[T]) (T, error) {
-	var zero T
-	if db == nil {
-		return zero, fmt.Errorf("db is disabled")
-	}
-	tx, err := db.BeginTxx(ctx, nil)
+type TxFuncFormatResp func(tx *sqlx.Tx) (any, error)
+
+func Tx(db *sqlx.DB, txFunc TxFuncFormatResp) (any, error) {
+	var (
+		tx  *sqlx.Tx
+		err error
+		res any
+	)
+
+	tx, err = db.Beginx()
 	if err != nil {
-		return zero, err
+		return nil, err
 	}
-	out, err := fn(tx)
-	if err != nil {
+
+	_, deallocErr := tx.Exec("DEALLOCATE ALL")
+	if deallocErr != nil {
 		_ = tx.Rollback()
-		return zero, err
 	}
-	if err := tx.Commit(); err != nil {
-		return zero, err
-	}
-	return out, nil
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			rollbackErr := tx.Rollback()
+			if rollbackErr != nil {
+				err = fmt.Errorf("transaction rollback failed: %v (original error: %w)", rollbackErr, err)
+			}
+		} else {
+			err = tx.Commit()
+		}
+	}()
+
+	res, err = txFunc(tx)
+	return res, err
 }
