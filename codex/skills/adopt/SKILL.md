@@ -47,7 +47,7 @@ If you can run the template’s adoption tool, prefer generating the scaffold in
 - `go run github.com/huangc28/vps-go-fx-template/cmd/adopt@latest --dir . --scaffold`
 
 If the repo doesn’t already provide a zap logger/config via constructors, add minimal providers so FX can build:
-- Logger: provide `*zap.Logger` and `*zap.SugaredLogger`.
+- Logger: provide `*zap.Logger` and `*zap.SugaredLogger` (prefer `*zap.SugaredLogger` in app code).
 - Config: Viper-backed typed config with defaults and zero required env vars.
 - DB/Redis: if you need them, copy the template `db/` and `cache/` packages rather than reimplementing.
 

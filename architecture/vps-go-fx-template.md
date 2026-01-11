@@ -155,7 +155,7 @@ Each domain owns its own FX wiring and dependencies, and exposes a single module
 
 ### 4.1 Core app module (infra)
 - `config.NewViper` and `config.NewConfig`
-- `internal/logs.NewLogger`
+- `internal/logs.NewLogger` and `internal/logs.NewSugaredLogger`
 - `db.NewSQLXPostgresDB` (optional, enabled when `DB_HOST` + `DB_NAME` are present)
 - `cache.NewRedis` (optional, enabled when `REDIS_HOST` is present)
 
@@ -205,3 +205,8 @@ Keep the same config approach (Viper + defaults). Typical vars:
   - `REDIS_HOST`
   - `REDIS_PORT` (default: `6379`)
   - `REDIS_SCHEME` (default: `redis`, use `rediss` for TLS)
+
+## 8) Logging Convention (Zap Sugared)
+
+- App code (handlers, repos, services) should depend on `*zap.SugaredLogger` rather than `*zap.Logger`.
+- Keep `*zap.Logger` available for FX event logging via `fx.WithLogger` (see `cmd/server/main.go`).
