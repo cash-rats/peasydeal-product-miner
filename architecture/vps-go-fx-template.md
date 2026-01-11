@@ -15,7 +15,7 @@ Normative terms:
 
 Rules to prevent architecture drift:
 - When this document specifies an exact filename, package path, route, or Makefile target name, agents **MUST implement it verbatim**.
-- Agents **MUST NOT introduce alternative names/paths/aliases** “for convenience” (e.g. adding `make server` when the spec says `make start`) unless explicitly asked by the human.
+- Agents **MUST NOT introduce alternative names/paths/aliases** “for convenience” unless explicitly asked by the human.
 - If a deviation seems beneficial, the agent **MUST ask first** and wait for confirmation.
 
 ## Acceptance Criteria (Initialization)
@@ -26,6 +26,18 @@ An “adoption/initialization” is only complete when all of these are true:
 - At least one route exists: `GET /health` returns `200` and `{ "ok": true }` using `internal/pkg/render.ChiJSON`.
 - `make start` exists and runs `go run ./cmd/server` (no alternate targets unless explicitly requested).
 - `go test ./...` and `go build ./...` succeed without requiring Postgres/Redis (infra is optional/gated by env vars).
+
+## Deterministic Infra Scaffolding (DB/Redis) — Hard Rules
+
+- Agents **MUST** use the canonical infra packages **exactly** as provided by this template:
+  - Postgres: `db/` (SQLX + pgx via `db.NewSQLXPostgresDB`)
+  - Redis: `cache/` (go-redis via `cache.NewRedis`)
+- Agents **MUST NOT** invent alternative DB/Redis implementations or alternate package paths unless explicitly instructed by a human.
+- In a different repo (adoption), if these packages do not exist, agents **MUST** copy `db/` and `cache/` into place (and only adjust import paths/module name as needed), rather than rewriting them from scratch.
+
+Recommended adoption mechanism (deterministic):
+- Prefer scaffolding from this repo’s canonical code via `go run github.com/huangc28/vps-go-fx-template/cmd/adopt@latest --dir . --scaffold`
+- Then run `go mod tidy` in the target repo to pull required deps.
 
 ## 0) Inngest (prebuilt, optional)
 
@@ -164,12 +176,8 @@ The server module depends on the constructed `*chi.Mux` and config/logger.
 
 ## 5) Makefile + Production Workflow
 
-Makefile targets (strict):
-- The Makefile **MUST** provide `start` which runs `go run ./cmd/server`.
-- The Makefile **MUST NOT** add synonyms/aliases (e.g. `server`) unless explicitly requested by the human.
-- Production targets **MAY** be added as described below.
-
-Production workflow (optional):
+Proposed Makefile targets:
+- `make start` runs `go run ./cmd/server`.
 - `make build/prod`, `make start/prod`, `make push/prod` use `docker-compose.prod.yaml`.
 
 ## 6) Minimal Example Domain (`health`)
@@ -197,10 +205,3 @@ Keep the same config approach (Viper + defaults). Typical vars:
   - `REDIS_HOST`
   - `REDIS_PORT` (default: `6379`)
   - `REDIS_SCHEME` (default: `redis`, use `rediss` for TLS)
-
-## 8) Drift Prevention (Recommended)
-
-If you want to enforce the spec automatically (CI/pre-commit), add lightweight checks such as:
-- Verify `Makefile` contains a `start:` target and does not contain forbidden synonyms unless explicitly allowed.
-- Verify `cmd/server/main.go` exists.
-- Verify a `/health` route exists (e.g. by grepping for `r.Get(\"/health\"` or an integration test).

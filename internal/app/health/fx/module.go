@@ -1,12 +1,12 @@
 package fx
 
 import (
-	"go.uber.org/fx"
-
 	"peasydeal-product-miner/internal/app/health"
 	"peasydeal-product-miner/internal/router"
+
+	"go.uber.org/fx"
 )
 
 var Module = fx.Options(
-	fx.Provide(router.AsRoute(health.NewHandler)),
+	router.AsRoute(health.NewHandler),
 )

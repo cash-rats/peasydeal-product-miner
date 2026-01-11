@@ -3,9 +3,8 @@ package router
 import (
 	"net/http"
 
-	"go.uber.org/fx"
-
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/fx"
 )
 
 type Handler interface {
@@ -13,10 +12,14 @@ type Handler interface {
 	Handle(w http.ResponseWriter, r *http.Request)
 }
 
-func AsRoute(constructor any) any {
-	return fx.Annotate(
-		constructor,
-		fx.As(new(Handler)),
-		fx.ResultTags(`group:"handlers"`),
+const routeGroupTag = `group:"routes"`
+
+func AsRoute(constructor any) fx.Option {
+	return fx.Provide(
+		fx.Annotate(
+			constructor,
+			fx.As(new(Handler)),
+			fx.ResultTags(routeGroupTag),
+		),
 	)
 }
