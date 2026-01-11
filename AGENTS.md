@@ -25,7 +25,8 @@ Read `architecture/vps-go-fx-template.md` before making structural changes or do
   - Enabled when `REDIS_HOST` is set; otherwise wiring must not block startup.
 - Deterministic scaffolding: when initializing/adopting this architecture, reuse the template’s `db/` and `cache/` packages as-is (do not invent new DB/Redis implementations or alternate package paths unless explicitly asked).
 - Logging uses zap:
-  - App logging can use `*zap.Logger` or `*zap.SugaredLogger` (preferred for request logs).
+  - App logging should use `*zap.SugaredLogger` by default.
+  - Keep `*zap.Logger` available for `fx.WithLogger` FX event logs (see `cmd/server/main.go`).
   - FX event logs should be routed through zap (see `fx.WithLogger` in `cmd/server/main.go`).
 
 ## Responses
