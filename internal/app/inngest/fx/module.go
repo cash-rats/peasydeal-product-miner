@@ -42,7 +42,7 @@ func registerFunctions(
 	}
 
 	logger.Infow("inngest_enabled",
-		"path", pkginngest.ServePath(cfg),
+		"path", cfg.Inngest.ServePath,
 		"event", crawl.CrawlRequestedEventName,
 	)
 	return nil
