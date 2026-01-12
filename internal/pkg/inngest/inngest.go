@@ -1,6 +1,7 @@
 package inngest
 
 import (
+	"log"
 	"net/url"
 	"strings"
 
@@ -17,9 +18,13 @@ func NewInngestClient(cfg *config.Config) (inngestgo.Client, error) {
 		scheme = "http"
 	}
 
+	log.Printf("~~1 %v  %v %v %v", scheme, cfg.Inngest.ServeHost, cfg.Inngest.ServePath, cfg.Inngest.AppID)
+
 	opts := inngestgo.ClientOpts{
 		AppID: cfg.Inngest.AppID,
-		Dev:   inngestgo.BoolPtr(cfg.Inngest.Dev == "1"),
+		// Dev:             inngestgo.BoolPtr(cfg.Inngest.Dev == "1"),
+		Dev: inngestgo.BoolPtr(true),
+		// EventAPIBaseURL: inngestgo.StrPtr("http://localhost:3010/api/inngest"),
 	}
 	signingKey := strings.TrimSpace(cfg.Inngest.SigningKey)
 	opts.SigningKey = &signingKey
@@ -28,13 +33,11 @@ func NewInngestClient(cfg *config.Config) (inngestgo.Client, error) {
 		return nil, err
 	}
 
-	if strings.TrimSpace(cfg.Inngest.ServeHost) != "" {
-		c.SetURL(&url.URL{
-			Scheme: scheme,
-			Host:   strings.TrimSpace(cfg.Inngest.ServeHost),
-			Path:   cfg.Inngest.ServePath,
-		})
-	}
+	c.SetURL(&url.URL{
+		Scheme: scheme,
+		Host:   strings.TrimSpace(cfg.Inngest.ServeHost),
+		Path:   cfg.Inngest.ServePath,
+	})
 
 	return c, nil
 }
