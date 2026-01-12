@@ -17,7 +17,7 @@ type NewRedisCacheParams struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Config    config.Config
+	Config    *config.Config
 	Logger    *zap.SugaredLogger
 }
 
@@ -27,28 +27,11 @@ func NewRedis(p NewRedisCacheParams) (*redis.Client, error) {
 		return nil, nil
 	}
 
-	scheme := strings.TrimSpace(p.Config.Redis.Scheme)
-	if scheme == "" {
-		scheme = "redis"
-	}
-
-	var connstr string
-	if strings.TrimSpace(p.Config.Redis.User) == "" && strings.TrimSpace(p.Config.Redis.Password) == "" {
-		connstr = fmt.Sprintf("%s://%s:%d", scheme, p.Config.Redis.Host, p.Config.Redis.Port)
-	} else {
-		connstr = fmt.Sprintf(
-			"%s://%s:%s@%s:%d",
-			scheme,
-			p.Config.Redis.User,
-			p.Config.Redis.Password,
-			p.Config.Redis.Host,
-			p.Config.Redis.Port,
-		)
-	}
-
-	opt, err := redis.ParseURL(connstr)
-	if err != nil {
-		return nil, fmt.Errorf("parse redis url: %w", err)
+	opt := &redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", p.Config.Redis.Host, p.Config.Redis.Port),
+		Username: strings.TrimSpace(p.Config.Redis.User),
+		Password: strings.TrimSpace(p.Config.Redis.Password),
+		DB:       int(p.Config.Redis.DB),
 	}
 
 	opt.PoolSize = 10

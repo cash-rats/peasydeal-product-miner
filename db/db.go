@@ -29,18 +29,13 @@ type Conn interface {
 	Rebind(query string) string
 }
 
-const (
-	Production = "production"
-	Preview    = "preview"
-)
-
 var ErrDBDisabled = errors.New("postgres disabled: set DB_* env vars to enable")
 
-func GetPostgresqlDSN(cfg config.Config) string {
+func GetPostgresqlDSN(cfg *config.Config) string {
 	pgdsn := "postgres://%s:%s@%s:%d/%s"
 	params := ""
 
-	if cfg.Env == Production || cfg.Env == Preview {
+	if cfg.ENV == config.Production || cfg.ENV == config.Preview {
 		params = "?sslmode=require"
 	}
 
@@ -102,7 +97,7 @@ type SQLXOut struct {
 	Conn Conn
 }
 
-func NewSQLXPostgresDB(lc fx.Lifecycle, cfg config.Config, logger *zap.SugaredLogger) (SQLXOut, error) {
+func NewSQLXPostgresDB(lc fx.Lifecycle, cfg *config.Config, logger *zap.SugaredLogger) (SQLXOut, error) {
 	if strings.TrimSpace(cfg.DB.Host) == "" || strings.TrimSpace(cfg.DB.Name) == "" {
 		logger.Infow("postgres_disabled")
 		return SQLXOut{DB: nil, Conn: newDisabledConn()}, nil
