@@ -22,7 +22,7 @@ type hooksParams struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Config    config.Config
+	Config    *config.Config
 	Logger    *zap.SugaredLogger
 	Server    *http.Server
 }

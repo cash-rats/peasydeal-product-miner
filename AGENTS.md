@@ -1,6 +1,6 @@
 # AGENTS.md (Codex)
 
-Read `architecture/vps-go-fx-template.md` before making structural changes or doing an adoption/migration.
+Read `architecture/vps-go-fx-template.md`, `architecture/config-go.md`, `architecture/db-go.md`, and `architecture/cache-redis-go.md` before making structural changes or doing an adoption/migration.
 
 ## Architecture (hard rules)
 - This repo uses Uber FX for dependency injection. No global singletons for DB/Redis/Config/Logger.
@@ -18,11 +18,14 @@ Read `architecture/vps-go-fx-template.md` before making structural changes or do
 
 ## Infra conventions
 - Config is via Viper: `config.NewViper` and `config.NewConfig` (defaults; zero required env vars).
+  - `config/config.go` structure and viper defaults **MUST** match `architecture/config-go.md` (treat it as a spec; do not diverge).
 - Postgres uses SQLX + pgx via `db.NewSQLXPostgresDB` and must be closed via `fx.Lifecycle` hooks.
   - Enabled when `DB_HOST` + `DB_NAME` are set; otherwise wiring must not block startup.
+  - `db/db.go` implementation **MUST** match `architecture/db-go.md` (treat it as a spec; do not diverge).
   - Use `db.Tx` (`db/tx.go`) as the standard transaction wrapper where appropriate.
 - Redis uses go-redis via `cache.NewRedis` and must be closed via `fx.Lifecycle` hooks.
   - Enabled when `REDIS_HOST` is set; otherwise wiring must not block startup.
+  - `cache/redis.go` implementation **MUST** match `architecture/cache-redis-go.md` (treat it as a spec; do not diverge).
 - Deterministic scaffolding: when initializing/adopting this architecture, reuse the template’s `db/` and `cache/` packages as-is (do not invent new DB/Redis implementations or alternate package paths unless explicitly asked).
 - Logging uses zap:
   - App logging should use `*zap.SugaredLogger` by default.

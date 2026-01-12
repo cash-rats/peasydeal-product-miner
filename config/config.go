@@ -1,82 +1,85 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/viper"
 )
 
-type Config struct {
-	AppName  string
-	Env      string
-	Port     int
-	LogLevel string
+type ENV string
 
-	DB    DBConfig
-	Redis RedisConfig
-}
-
-type DBConfig struct {
-	User     string
-	Password string
-	Host     string
-	Port     int
-	Name     string
-}
-
-type RedisConfig struct {
-	User     string
-	Password string
-	Host     string
-	Port     int
-	Scheme   string
-}
+// Vercel envs
+var (
+	Production ENV = "production"
+	Preview    ENV = "preview"
+	Dev        ENV = "development"
+	Test       ENV = "test"
+)
 
 func NewViper() *viper.Viper {
-	v := viper.New()
+	vp := viper.New()
 
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
-	v.AutomaticEnv()
+	vp.SetDefault("env", Dev)
+	vp.SetDefault("app.port", "8080")
+	vp.SetDefault("app.addr", "0.0.0.0")
 
-	v.SetDefault("APP_NAME", "go-vps-service")
-	v.SetDefault("APP_ENV", "development")
-	v.SetDefault("APP_PORT", 8080)
-	v.SetDefault("LOG_LEVEL", "info")
+	vp.SetDefault("db.host", "")
+	vp.SetDefault("db.port", 5432)
+	vp.SetDefault("db.user", "")
+	vp.SetDefault("db.password", "")
+	vp.SetDefault("db.name", "")
+	vp.SetDefault("db.timezone", "")
 
-	v.SetDefault("DB_USER", "")
-	v.SetDefault("DB_PASSWORD", "")
-	v.SetDefault("DB_HOST", "")
-	v.SetDefault("DB_PORT", 5432)
-	v.SetDefault("DB_NAME", "")
+	vp.SetDefault("redis.host", "")
+	vp.SetDefault("redis.user", "default")
+	vp.SetDefault("redis.port", 6379)
+	vp.SetDefault("redis.password", "")
+	vp.SetDefault("redis.db", 0)
 
-	v.SetDefault("REDIS_USER", "")
-	v.SetDefault("REDIS_PASSWORD", "")
-	v.SetDefault("REDIS_HOST", "")
-	v.SetDefault("REDIS_PORT", 6379)
-	v.SetDefault("REDIS_SCHEME", "redis")
+	vp.SetDefault("inngest.dev", "")
+	vp.SetDefault("inngest.app_id", "")
+	vp.SetDefault("inngest.signing_key", "")
+	vp.SetDefault("inngest.serve_host", "")
+	vp.SetDefault("inngest.serve_path", "")
 
-	return v
+	replacer := strings.NewReplacer(".", "_")
+	vp.SetEnvKeyReplacer(replacer)
+	vp.AutomaticEnv()
+
+	return vp
 }
 
-func NewConfig(v *viper.Viper) (Config, error) {
-	return Config{
-		AppName:  v.GetString("APP_NAME"),
-		Env:      v.GetString("APP_ENV"),
-		Port:     v.GetInt("APP_PORT"),
-		LogLevel: v.GetString("LOG_LEVEL"),
-		DB: DBConfig{
-			User:     v.GetString("DB_USER"),
-			Password: v.GetString("DB_PASSWORD"),
-			Host:     v.GetString("DB_HOST"),
-			Port:     v.GetInt("DB_PORT"),
-			Name:     v.GetString("DB_NAME"),
-		},
-		Redis: RedisConfig{
-			User:     v.GetString("REDIS_USER"),
-			Password: v.GetString("REDIS_PASSWORD"),
-			Host:     v.GetString("REDIS_HOST"),
-			Port:     v.GetInt("REDIS_PORT"),
-			Scheme:   v.GetString("REDIS_SCHEME"),
-		},
-	}, nil
+type Config struct {
+	ENV ENV `mapstructure:"env"`
+
+	App struct {
+		Port string `mapstructure:"port"`
+		Addr string `mapstructure:"addr"`
+	} `mapstructure:"app"`
+
+	DB struct {
+		Host     string `mapstructure:"host"`
+		Port     uint   `mapstructure:"port"`
+		User     string `mapstructure:"user"`
+		Password string `mapstructure:"password"`
+		Name     string `mapstructure:"name"`
+		TimeZone string `mapstructure:"timezone"`
+	} `mapstructure:"db"`
+
+	Redis struct {
+		User     string `mapstructure:"user"`
+		Host     string `mapstructure:"host"`
+		Port     uint   `mapstructure:"port"`
+		Password string `mapstructure:"password"`
+		DB       uint   `mapstructure:"db"`
+	} `mapstructure:"redis"`
+}
+
+func NewConfig(vp *viper.Viper) (*Config, error) {
+	cfg := &Config{}
+	if err := vp.Unmarshal(cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal config: %w", err)
+	}
+	return cfg, nil
 }

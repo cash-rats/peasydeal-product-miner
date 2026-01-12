@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"peasydeal-product-miner/internal/pkg/render"
+	"peasydeal-product-miner/internal/router"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -23,3 +24,5 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		"ok": true,
 	})
 }
+
+var _ router.Handler = (*Handler)(nil)

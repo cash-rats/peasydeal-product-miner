@@ -34,6 +34,9 @@ An “adoption/initialization” is only complete when all of these are true:
   - Redis: `cache/` (go-redis via `cache.NewRedis`)
 - Agents **MUST NOT** invent alternative DB/Redis implementations or alternate package paths unless explicitly instructed by a human.
 - In a different repo (adoption), if these packages do not exist, agents **MUST** copy `db/` and `cache/` into place (and only adjust import paths/module name as needed), rather than rewriting them from scratch.
+- Agents **MUST** implement `config/config.go` to match `architecture/config-go.md` **verbatim** (treat it as a spec).
+- Agents **MUST** implement `db/db.go` to match `architecture/db-go.md` **verbatim** (treat it as a spec).
+- Agents **MUST** implement `cache/redis.go` to match `architecture/cache-redis-go.md` **verbatim** (treat it as a spec).
 
 Recommended adoption mechanism (deterministic):
 - Prefer scaffolding from this repo’s canonical code via `go run github.com/huangc28/vps-go-fx-template/cmd/adopt@latest --dir . --scaffold`

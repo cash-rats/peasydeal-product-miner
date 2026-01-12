@@ -7,21 +7,20 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func NewLogger(cfg config.Config) (*zap.Logger, error) {
+func NewLogger(cfg *config.Config) (*zap.Logger, error) {
 	zapCfg := zap.NewProductionConfig()
-	if cfg.Env == "development" {
+	if cfg.ENV == config.Dev {
 		zapCfg = zap.NewDevelopmentConfig()
 	}
 
 	level := zapcore.InfoLevel
-	if err := level.Set(cfg.LogLevel); err != nil {
-		return nil, err
+	if cfg.ENV == config.Dev {
+		level = zapcore.DebugLevel
 	}
 
 	zapCfg.Level = zap.NewAtomicLevelAt(level)
 	zapCfg.InitialFields = map[string]any{
-		"app": cfg.AppName,
-		"env": cfg.Env,
+		"env": cfg.ENV,
 	}
 
 	return zapCfg.Build()
