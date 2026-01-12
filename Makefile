@@ -26,11 +26,12 @@ start:
 
 ## start/inngest: start the inngest dev server
 .PHONY: start/inngest
+INNGEST_SERVE_HOST ?= localhost:3012
 start/inngest:
 	npx inngest-cli@latest dev \
 		--no-discovery \
 		--poll-interval 10000 \
-		-u http://localhost:8080/api/inngest
+		-u http://$(INNGEST_SERVE_HOST)/api/inngest
 
 .PHONY: dev-chrome
 dev-chrome:
