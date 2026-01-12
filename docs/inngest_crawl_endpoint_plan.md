@@ -27,20 +27,35 @@ Define one event name that carries the URL:
   - `url` (string, required) — Shopee/Taobao URL (validated with `internal/source.Detect`)
   - `out_dir` (string, optional) — defaults to `CRAWL_OUT_DIR` or `out/`
   - `codex_model` (string, optional) — forwarded to `runner.Options.CodexModel`
-  - `skip_git_repo_check` (bool, optional) — forwarded to `runner.Options.SkipGitRepoCheck`
   - `request_id` (string, optional) — for correlation/logging
 
 ## Architecture changes (FX + chi)
 
 ### 1) Add an Inngest wrapper package
 
-Create `internal/pkg/inngestclient` to keep Inngest SDK wiring isolated and reusable:
+Create (or use) an Inngest wrapper package to keep Inngest SDK wiring isolated and reusable:
+
+- Preferred (per repo convention): `internal/pkg/inngestclient`
+- If you’ve already created it: `internal/pkg/inngest` (keep it generic and SDK-contained)
 
 - Responsibilities:
   - Read required config/env (via existing `config.Config` if appropriate, or direct env access if config doesn’t yet include these keys).
   - Construct the Inngest client/handler (SDK-specific).
   - Provide “enabled/disabled” state so the HTTP handler can return `501/503` when missing keys.
 - Avoid leaking SDK types outside this package (return `http.Handler` or minimal interfaces).
+
+#### Corresponding config keys (add/use)
+
+Use `config.Config.Inngest` (already modeled in `config/config.go`) as the source of truth:
+
+- `inngest.dev` (`INNGEST_DEV`) — enables dev mode / local serve if applicable
+- `inngest.app_id` (`INNGEST_APP_ID`) — app identifier (SDK-dependent)
+- `inngest.signing_key` (`INNGEST_SIGNING_KEY`) — required to verify requests (required to enable endpoint)
+- `inngest.serve_host` (`INNGEST_SERVE_HOST`) — optional override for serve host/base URL (SDK-dependent)
+- `inngest.serve_path` (`INNGEST_SERVE_PATH`) — optional override (default should be `/api/inngest` if you want config-driven routing)
+
+Enable/disable gating recommendation:
+- Treat the endpoint as **enabled** only when `inngest.signing_key` is non-empty (and any other required SDK keys are present).
 
 ### 2) Implement the Inngest HTTP handler
 
@@ -84,7 +99,7 @@ Add an Inngest function that runs the existing runner:
      - `OutDir`: payload `out_dir` or `CRAWL_OUT_DIR` default (recommend default `out/`)
      - `CodexCmd`: default `codex` (or `CODEX_CMD` env override)
      - `CodexModel`: payload `codex_model` or `CODEX_MODEL` env default
-     - `SkipGitRepoCheck`: payload override defaulting to `true` in containers (optional)
+     - `SkipGitRepoCheck`: default to `true` (always skip git repo check; not part of payload)
   3. Execute `runner.RunOnce(opts)`.
   4. Emit structured logs including `url`, detected `source`, duration, and output path.
   5. Return a compact result (eg. `{ "out_path": "...", "status": "...", "captured_at": "..." }`).
@@ -144,4 +159,3 @@ Add an Inngest function that runs the existing runner:
 3. Add the Inngest function for `crawler/url.requested` that calls `runner.RunOnce`.
 4. Verify locally with/without Inngest env vars; confirm `/health` unchanged.
 5. Document env vars and sample Inngest event payload in `README.md` (optional follow-up).
-
