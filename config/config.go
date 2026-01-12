@@ -51,7 +51,7 @@ func NewViper() *viper.Viper {
 }
 
 type Config struct {
-	ENV ENV `mapstructure:"env"`
+	ENV ENV `mapstructure:"vercel_env"`
 
 	App struct {
 		Port string `mapstructure:"port"`
@@ -74,6 +74,14 @@ type Config struct {
 		Password string `mapstructure:"password"`
 		DB       uint   `mapstructure:"db"`
 	} `mapstructure:"redis"`
+
+	Inngest struct {
+		Dev        string `mapstructure:"dev"`
+		AppID      string `mapstructure:"app_id"`
+		SigningKey string `mapstructure:"signing_key"`
+		ServeHost  string `mapstructure:"serve_host"`
+		ServePath  string `mapstructure:"serve_path"`
+	} `mapstructure:"inngest"`
 }
 
 func NewConfig(vp *viper.Viper) (*Config, error) {
