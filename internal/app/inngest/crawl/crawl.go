@@ -47,7 +47,7 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 	opts := runner.Options{
 		URL:              url,
 		OutDir:           outDir,
-		CodexModel:       "codex",
+		CodexModel:       "gpt-5.1-codex-mini",
 		SkipGitRepoCheck: true,
 	}
 
