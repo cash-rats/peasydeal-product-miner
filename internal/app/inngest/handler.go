@@ -34,7 +34,7 @@ func NewInngestHandler(p NewInngestHandlerParams) *InngestHandler {
 }
 
 func (h *InngestHandler) RegisterRoute(r *chi.Mux) {
-	r.Get("/api/inngest", h.Handle)
+	r.Post("/api/inngest", h.Handle)
 }
 
 func (h *InngestHandler) Handle(w http.ResponseWriter, r *http.Request) {

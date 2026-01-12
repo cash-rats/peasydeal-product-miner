@@ -24,6 +24,14 @@ help:
 start:
 	go run ./cmd/server
 
+## start/inngest: start the inngest dev server
+.PHONY: start/inngest
+start/inngest:
+	PORT=3011 npx inngest-cli@latest dev \
+		--no-discovery \
+		--poll-interval 10000 \
+		-u http://localhost:3010/api/inngest
+
 .PHONY: dev-chrome
 dev-chrome:
 	go run ./cmd/devtool chrome
