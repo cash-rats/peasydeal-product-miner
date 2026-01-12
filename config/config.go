@@ -51,7 +51,7 @@ func NewViper() *viper.Viper {
 }
 
 type Config struct {
-	ENV ENV `mapstructure:"vercel_env"`
+	ENV ENV `mapstructure:"env"`
 
 	App struct {
 		Port string `mapstructure:"port"`
