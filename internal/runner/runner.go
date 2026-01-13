@@ -73,6 +73,8 @@ func RunOnce(opts Options) (string, Result, error) {
 		opts.PromptFile = c.DefaultPromptFile()
 	}
 
+	log.Printf("📄 prompt selected url=%s source=%s file=%s", opts.URL, src, opts.PromptFile)
+
 	prompt, err := loadPrompt(opts.PromptFile, opts.URL)
 	if err != nil {
 		r := errorResult(opts.URL, err)
@@ -83,7 +85,8 @@ func RunOnce(opts Options) (string, Result, error) {
 		return outPath, r, err
 	}
 
-	raw, err := runCodex(opts.CodexCmd, opts.CodexModel, opts.SkipGitRepoCheck, opts.URL, prompt)
+	// raw, err := runCodex(opts.CodexCmd, opts.CodexModel, opts.SkipGitRepoCheck, opts.URL, prompt)
+	raw, err := runCodex(opts.CodexCmd, "gpt-5.2", opts.SkipGitRepoCheck, opts.URL, prompt)
 	if err != nil {
 		r := errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, r)
@@ -92,6 +95,8 @@ func RunOnce(opts Options) (string, Result, error) {
 		}
 		return outPath, r, err
 	}
+	// _ = prompt
+	// raw := `{"status":"needs_manual","debug":"runCodex skipped for debugging"}`
 
 	r, err := parseResult(raw)
 	if err != nil {
@@ -104,6 +109,7 @@ func RunOnce(opts Options) (string, Result, error) {
 	}
 
 	r.setdefault("url", opts.URL)
+	r.setdefault("source", string(src))
 	r.setdefault("captured_at", nowISO())
 	if verr := validateMinimal(r); verr != nil {
 		r = errorResult(opts.URL, verr)
