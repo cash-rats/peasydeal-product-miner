@@ -62,10 +62,15 @@ func (s *CrawlURLJobTestSuite) TestSendCrawlerURLRequested() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
+		targetURL := "https://shopee.tw/%E3%80%90%E9%99%84%E7%99%BC%E7%A5%A8%E3%80%9124H%E6%A1%8C%E5%A2%8A-%E9%80%8F%E6%98%8E%E7%A3%A8%E9%82%8A-%E9%98%B2%E6%B0%B4%E9%98%B2%E6%B2%B9-%E5%AE%A2%E8%A3%BD%E8%A3%81%E5%89%AA-%E5%8E%9A%E5%BA%A65mm-%E5%A4%9A%E9%81%B8%E9%A4%90%E6%A1%8C%E5%A2%8A-%E5%9C%93%E6%A1%8C%E5%A2%8A%E8%8C%B6%E5%87%A0%E5%A2%8A-%E9%AB%98%E7%B4%9A%E6%84%9F%E5%8F%AF%E8%A3%81%E5%89%AA%E7%84%A1%E5%91%B3%E6%A1%8C%E5%A2%8A-%E9%98%B2%E7%87%99%E9%98%B2%E6%B2%B9-i.279216161.21065663294?extraParams=%7B%22display_model_id%22%3A158245746215%2C%22model_selection_logic%22%3A3%7D"
+		eventID, err := crawl.EventIDForURL(targetURL)
+		s.Require().NoError(err)
+
 		evtID, err := s.client.Send(ctx, inngestgo.Event{
+			ID:   inngestgo.StrPtr(eventID),
 			Name: crawl.CrawlRequestedEventName,
 			Data: map[string]any{
-				"url":        "https://shopee.tw/Logitech-%E7%BE%85%E6%8A%80-MX-Master-3s-%E7%84%A1%E7%B7%9A%E6%99%BA%E8%83%BD%E6%BB%91%E9%BC%A0-i.48032592.19104326163?extraParams=%7B%22display_model_id%22%3A38809409020%2C%22model_selection_logic%22%3A3%7D&sp_atk=e1cf6787-579b-4e54-81d1-c717ed615734&xptdk=e1cf6787-579b-4e54-81d1-c717ed615734",
+				"url":        targetURL,
 				"out_dir":    "out",
 				"request_id": "e2e-test",
 			},

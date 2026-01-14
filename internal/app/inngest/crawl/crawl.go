@@ -61,20 +61,20 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 
 		checkURL := chromedevtools.VersionURL(chromedevtools.DefaultHost, f.cfg.Chrome.DebugPort)
 		if _, err := chromedevtools.CheckReachable(ctx, checkURL, 3*time.Second); err != nil {
-			return nil, err
+			f.logger.Errorw(
+				"inngest_step_failed",
+				"step", "check-devtools",
+				"doing", "check Chrome DevTools is reachable",
+				"err", err,
+			)
+			return nil, inngestgo.NoRetryError(err)
 		}
 
 		f.logger.Infoln("✅ done check-devtools")
 		return nil, nil
 	})
 	if err != nil {
-		f.logger.Errorw(
-			"inngest_step_failed",
-			"step", "check-devtools",
-			"doing", "check Chrome DevTools is reachable",
-			"err", err,
-		)
-		return nil, inngestgo.NoRetryError(err)
+		return nil, err
 	}
 
 	outDir, err := step.Run(ctx, "resolve-out-dir", func(ctx context.Context) (string, error) {
@@ -86,23 +86,17 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 		if outDir == "" {
 			outDir = "out"
 		}
-		f.logger.Infoln("✅ done resolve-out-dir")
+		f.logger.Infow(
+			"✅ done inngest_step_finished",
+			"step", "resolve-out-dir",
+			"doing", "resolve output directory (default out)",
+			"out", outDir,
+		)
 		return outDir, nil
 	})
 	if err != nil {
-		f.logger.Errorw(
-			"inngest_step_failed",
-			"step", "resolve-out-dir",
-			"doing", "resolve output directory (default out)",
-			"err", err,
-		)
-		return nil, inngestgo.NoRetryError(err)
+		return nil, err
 	}
-	f.logger.Infow(
-		"inngest_step_finished",
-		"step", "resolve-out-dir",
-		"doing", "resolve output directory (default out)",
-	)
 
 	r, err := step.Run(ctx, "run-crawler", func(ctx context.Context) (RunResult, error) {
 		f.logger.Infow("🏃🏻 inngest_step",
@@ -117,23 +111,26 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 			SkipGitRepoCheck: true,
 		})
 
+		if err != nil {
+			f.logger.Errorw("❌ inngest_crawl_failed",
+				"url", url,
+				"out_path", outPath,
+				"err", err,
+			)
+			return RunResult{}, inngestgo.NoRetryError(err)
+		}
+
 		f.logger.Infoln("✅ inngest_step")
 
 		return RunResult{OutPath: outPath, Result: result}, err
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	resp := map[string]any{
 		"out_path": r.OutPath,
 		"result":   r.Result,
-	}
-
-	if err != nil {
-		f.logger.Errorw("❌ inngest_crawl_failed",
-			"url", url,
-			"out_path", r.OutPath,
-			"err", err,
-		)
-		return resp, inngestgo.NoRetryError(err)
 	}
 
 	f.logger.Infow("inngest_step_finished",
