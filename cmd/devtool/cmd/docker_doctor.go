@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"peasydeal-product-miner/internal/envutil"
+	"peasydeal-product-miner/internal/pkg/chromedevtools"
 )
 
 func newDockerDoctorCmd() *cobra.Command {
@@ -23,13 +24,11 @@ func newDockerDoctorCmd() *cobra.Command {
 		Use:   "docker-doctor",
 		Short: "Check Chrome + Codex auth for Docker runs",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			url := fmt.Sprintf("http://127.0.0.1:%s/json/version", port)
-			client := &http.Client{Timeout: 3 * time.Second}
-			resp, err := client.Get(url)
+			url := chromedevtools.VersionURL(chromedevtools.DefaultHost, port)
+			_, err := chromedevtools.CheckReachable(context.Background(), url, 3*time.Second)
 			if err != nil {
 				return fmt.Errorf("host Chrome DevTools not reachable at %s (start it via `make dev-chrome` and login/solve CAPTCHA if needed): %w", url, err)
 			}
-			resp.Body.Close()
 			fmt.Printf("✅ Chrome ready: DevTools reachable at %s\n", url)
 
 			info, err := os.Stat(authFile)
@@ -61,4 +60,3 @@ func newDockerDoctorCmd() *cobra.Command {
 	cmd.Flags().StringVar(&authFile, "auth-file", filepath.Join("codex", ".codex", "auth.json"), "Path to Codex auth.json persisted for Docker runs")
 	return cmd
 }
-

@@ -1,17 +1,18 @@
 You are controlling an already-running Google Chrome via Chrome DevTools.
 
-Goal: extract ONLY the product title and sale price from a Shopee product page as fast as possible.
+Goal: extract the product title, sale price, and product description from a Shopee product page as fast as possible.
 
 Performance rules (important):
 - Minimize tool round-trips: prefer 1 navigation + 1 evaluate_script call total.
 - Do NOT scroll the whole page, do NOT take screenshots unless blocked.
 - Do NOT scan the entire DOM; use a few targeted selectors + meta tags.
+- Do NOT call `fetch`, `XMLHttpRequest`, or any Shopee APIs. Only read already-present DOM/HTML.
 
 Task:
 1) Navigate to this Shopee product URL: {{URL}}
 2) Wait until the page is ready:
    - document.readyState === "complete", AND
-   - EITHER a title is present (meta/h1) OR a price-like string is present in the page text.
+   - EITHER a title is present (meta/h1) OR a price-like string is present in the page text OR JSON-LD Product is present.
 3) Extract data in ONE evaluate_script (keep it simple and fast):
    - Detect blocking walls early:
      - If you see login / verification / CAPTCHA (e.g., "登入", "登錄", "驗證", "captcha", "robot", slider verification),
@@ -21,11 +22,16 @@ Task:
      2) visible `main h1` (fallback `h1`)
      3) `document.title` (last resort)
      - Clean title: trim + collapse repeated whitespace.
+   - Description (prefer stable sources, in this order):
+     1) JSON-LD `script[type="application/ld+json"]` where `@type` includes `"Product"` -> `description`
+     2) `meta[property="og:description"]` (fallback `meta[name="description"]`)
+     3) A targeted DOM node for product description (only if obvious; do not crawl the whole DOM)
+     - Clean description: trim; keep newlines; collapse excessive whitespace.
    - Price (prefer stable sources, in this order):
      1) `meta[property="product:price:amount"]` (fallback other price-ish meta like `meta[itemprop="price"]`)
      2) A price-like string found in the page text (regex for `NT$`/`$` + digits); if a range is shown, take the minimum.
      - Avoid crossed-out prices: ignore text inside `<del>/<s>` and ignore elements with computed `textDecorationLine` containing `"line-through"`.
-   - If the page is not blocked and you still cannot get a non-empty `title` OR a valid `price`,
+   - If the page is not blocked and you still cannot get a non-empty `title` OR a valid `price` OR a non-empty `description`,
      return status="error" with a short reason (what was missing).
 
 Output contract (JSON ONLY, no markdown):
@@ -36,11 +42,12 @@ Output contract (JSON ONLY, no markdown):
   "notes": "string (required when status=needs_manual)",
   "error": "string (required when status=error)",
   "title": "string",
+  "description": "string",
   "price": "number or numeric string"
 }
 
 Rules:
-- If status="ok": include title and price.
+- If status="ok": include title, description, and price.
 - If status="needs_manual": include notes describing the wall.
 - If status="error": include error (string) with the failure reason.
 - Do NOT output placeholder type-descriptions like "string" as values; output real values with correct JSON types.

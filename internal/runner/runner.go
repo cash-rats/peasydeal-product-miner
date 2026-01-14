@@ -73,8 +73,6 @@ func RunOnce(opts Options) (string, Result, error) {
 		opts.PromptFile = c.DefaultPromptFile()
 	}
 
-	log.Printf("📄 prompt selected url=%s source=%s file=%s", opts.URL, src, opts.PromptFile)
-
 	prompt, err := loadPrompt(opts.PromptFile, opts.URL)
 	if err != nil {
 		r := errorResult(opts.URL, err)
@@ -84,6 +82,8 @@ func RunOnce(opts Options) (string, Result, error) {
 		}
 		return outPath, r, err
 	}
+
+	log.Printf("📄 prompt selected url=%s source=%s prompt=%s", opts.URL, src, prompt)
 
 	// raw, err := runCodex(opts.CodexCmd, opts.CodexModel, opts.SkipGitRepoCheck, opts.URL, prompt)
 	raw, err := runCodex(opts.CodexCmd, "gpt-5.2", opts.SkipGitRepoCheck, opts.URL, prompt)
