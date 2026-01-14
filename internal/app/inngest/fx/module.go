@@ -29,7 +29,11 @@ func registerFunctions(
 ) error {
 	_, err := inngestgo.CreateFunction(
 		client,
-		inngestgo.FunctionOpts{ID: "crawl-url"},
+		inngestgo.FunctionOpts{
+			ID:          "crawl-url",
+			Idempotency: inngestgo.StrPtr("event.id"),
+			Retries:     inngestgo.IntPtr(0),
+		},
 		inngestgo.EventTrigger(crawl.CrawlRequestedEventName, nil),
 		crawlFunc.Handle,
 	)

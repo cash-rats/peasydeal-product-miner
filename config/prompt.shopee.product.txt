@@ -28,8 +28,13 @@ Task:
      3) A targeted DOM node for product description (only if obvious; do not crawl the whole DOM)
      - Clean description: trim; keep newlines; collapse excessive whitespace.
    - Price (prefer stable sources, in this order):
-     1) `meta[property="product:price:amount"]` (fallback other price-ish meta like `meta[itemprop="price"]`)
-     2) A price-like string found in the page text (regex for `NT$`/`$` + digits); if a range is shown, take the minimum.
+     1) JSON-LD `script[type="application/ld+json"]` where `@type` includes `"Product"` -> `offers`
+        - Handle both `Offer` and `AggregateOffer`
+        - Prefer: `offers.price` (if present)
+        - Fallback: `offers.lowPrice` / `offers.highPrice` (use min when range)
+        - Normalize: strip currency symbols/commas/spaces; keep digits + optional decimal
+     2) `meta[property="product:price:amount"]` (fallback `meta[itemprop="price"]`, `meta[property="og:price:amount"]`)
+     3) Targeted DOM selector(s) for the current sale price (avoid scanning all page text; do not use `document.body.innerText` unless completely blocked).
      - Avoid crossed-out prices: ignore text inside `<del>/<s>` and ignore elements with computed `textDecorationLine` containing `"line-through"`.
    - If the page is not blocked and you still cannot get a non-empty `title` OR a valid `price` OR a non-empty `description`,
      return status="error" with a short reason (what was missing).
@@ -43,14 +48,19 @@ Output contract (JSON ONLY, no markdown):
   "error": "string (required when status=error)",
   "title": "string",
   "description": "string",
+  "currency": "string (e.g. TWD)",
   "price": "number or numeric string"
 }
 
 Rules:
-- If status="ok": include title, description, and price.
+- If status="ok": include title, description, currency, and price.
 - If status="needs_manual": include notes describing the wall.
 - If status="error": include error (string) with the failure reason.
 - Do NOT output placeholder type-descriptions like "string" as values; output real values with correct JSON types.
 - Normalize price:
   - Strip currency symbols, commas, spaces; keep only digits and an optional decimal point.
   - If the page shows a range, use the minimum.
+ - Currency:
+   - Prefer JSON-LD `offers.priceCurrency` (if present).
+   - Fallback to `meta[property="product:price:currency"]` (or `meta[property="og:price:currency"]`).
+   - If you still cannot find a currency but the site is Shopee TW, use `"TWD"` as a last resort.
