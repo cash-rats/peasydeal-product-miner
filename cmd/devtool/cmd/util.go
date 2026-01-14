@@ -22,8 +22,3 @@ func findFirstInPath(candidates []string) (string, error) {
 	}
 	return "", fmt.Errorf("could not find Chrome/Chromium in PATH (tried: %s)", strings.Join(candidates, ", "))
 }
-
-func bytesTrimSpace(b []byte) []byte {
-	return []byte(strings.TrimSpace(string(b)))
-}
-

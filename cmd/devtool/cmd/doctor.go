@@ -1,15 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"peasydeal-product-miner/internal/envutil"
+	"peasydeal-product-miner/internal/pkg/chromedevtools"
 )
 
 func newDoctorCmd() *cobra.Command {
@@ -19,21 +19,12 @@ func newDoctorCmd() *cobra.Command {
 		Use:   "doctor",
 		Short: "Check DevTools is reachable on localhost",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			url := fmt.Sprintf("http://127.0.0.1:%s/json/version", port)
+			url := chromedevtools.VersionURL(chromedevtools.DefaultHost, port)
 			fmt.Println("Checking:", url)
 
-			client := &http.Client{Timeout: 3 * time.Second}
-			resp, err := client.Get(url)
+			_, err := chromedevtools.CheckReachable(context.Background(), url, 3*time.Second)
 			if err != nil {
 				return fmt.Errorf("Chrome DevTools not reachable (is Chrome running with --remote-debugging-port=%s?): %w", port, err)
-			}
-			defer resp.Body.Close()
-			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-				return fmt.Errorf("unexpected status %s from %s", resp.Status, url)
-			}
-			b, _ := io.ReadAll(io.LimitReader(resp.Body, 1024*32))
-			if len(bytesTrimSpace(b)) == 0 {
-				return fmt.Errorf("empty response from %s", url)
 			}
 			fmt.Println("✅ OK: Chrome DevTools reachable.")
 			return nil
@@ -43,4 +34,3 @@ func newDoctorCmd() *cobra.Command {
 	cmd.Flags().StringVar(&port, "port", envutil.String(os.Getenv, "CHROME_DEBUG_PORT", "9222"), "Chrome DevTools remote debugging port")
 	return cmd
 }
-
