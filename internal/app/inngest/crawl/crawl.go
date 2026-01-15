@@ -104,10 +104,24 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 			"doing", "run crawler (runner.RunOnce)",
 		)
 
+		tool := strings.TrimSpace(f.cfg.CrawlTool)
+		if tool == "" {
+			tool = "codex"
+		}
+		switch tool {
+		case "codex", "gemini":
+		default:
+			return RunResult{}, inngestgo.NoRetryError(fmt.Errorf("invalid crawl tool: %s", tool))
+		}
+
+		f.logger.Infow("⚒️ inngest_crawl_tool_selected",
+			"tool", tool,
+		)
+
 		outPath, result, err := runner.RunOnce(runner.Options{
 			URL:              url,
 			OutDir:           outDir,
-			Model:            "gpt-5.2",
+			Tool:             tool,
 			SkipGitRepoCheck: true,
 		})
 
