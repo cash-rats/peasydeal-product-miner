@@ -35,7 +35,7 @@ func newRootCmd() *cobra.Command {
 				URL:              url,
 				PromptFile:       promptFile,
 				OutDir:           outDir,
-				CodexCmd:         codexCmd,
+				Cmd:              codexCmd,
 				SkipGitRepoCheck: envutil.Bool(os.Getenv, "CODEX_SKIP_GIT_REPO_CHECK", false),
 			})
 

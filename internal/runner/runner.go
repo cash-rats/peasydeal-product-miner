@@ -1,12 +1,10 @@
 package runner
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -27,8 +25,21 @@ type Options struct {
 	URL        string
 	PromptFile string
 	OutDir     string
-	CodexCmd   string
-	// CodexModel passes `--model` to Codex CLI when non-empty.
+	Tool       string // "codex" or "gemini"
+
+	// Cmd is the binary name/path to execute (e.g. "codex" or "gemini").
+	// If empty, CodexCmd is used for backward compatibility.
+	Cmd string
+
+	// Model passes `--model` to tools that support it (Codex CLI and Gemini CLI).
+	// If empty, CodexModel is used for backward compatibility.
+	Model string
+
+	// CodexCmd is a deprecated alias for Cmd.
+	CodexCmd string
+
+	// CodexModel is a deprecated alias for Model.
+	// It historically passed `--model` to Codex CLI when non-empty.
 	CodexModel string
 	// SkipGitRepoCheck passes `--skip-git-repo-check` to Codex CLI.
 	// This is useful in containers or non-git directories.
@@ -41,9 +52,6 @@ func RunOnce(opts Options) (string, Result, error) {
 	}
 	if strings.TrimSpace(opts.OutDir) == "" {
 		return "", nil, fmt.Errorf("missing OutDir")
-	}
-	if strings.TrimSpace(opts.CodexCmd) == "" {
-		opts.CodexCmd = "codex"
 	}
 
 	if err := os.MkdirAll(opts.OutDir, 0o755); err != nil {
@@ -83,10 +91,7 @@ func RunOnce(opts Options) (string, Result, error) {
 		return outPath, r, err
 	}
 
-	log.Printf("📄 prompt selected url=%s source=%s prompt=%s", opts.URL, src, prompt)
-
-	// raw, err := runCodex(opts.CodexCmd, opts.CodexModel, opts.SkipGitRepoCheck, opts.URL, prompt)
-	raw, err := runCodex(opts.CodexCmd, "gpt-5.2", opts.SkipGitRepoCheck, opts.URL, prompt)
+	tr, err := NewToolRunnerFromOptions(opts)
 	if err != nil {
 		r := errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, r)
@@ -95,10 +100,20 @@ func RunOnce(opts Options) (string, Result, error) {
 		}
 		return outPath, r, err
 	}
-	// _ = prompt
-	// raw := `{"status":"needs_manual","debug":"runCodex skipped for debugging"}`
 
-	r, err := parseResult(raw)
+	log.Printf("📄 prompt selected url=%s source=%s prompt_file=%s tool=%s", opts.URL, src, opts.PromptFile, tr.Name())
+
+	raw, err := tr.Run(opts.URL, prompt)
+	if err != nil {
+		r := errorResult(opts.URL, err)
+		outPath, werr := writeResult(opts.OutDir, r)
+		if werr != nil {
+			return "", r, werr
+		}
+		return outPath, r, err
+	}
+
+	r, err := parseResult(tr.Name(), raw)
 	if err != nil {
 		r = errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, r)
@@ -136,44 +151,13 @@ func loadPrompt(promptPath string, url string) (string, error) {
 	return strings.ReplaceAll(string(b), "{{URL}}", url), nil
 }
 
-func runCodex(codexCmd string, codexModel string, skipGitRepoCheck bool, url string, prompt string) (string, error) {
-	// Codex CLI expects exec-scoped flags after the subcommand:
-	//   codex exec --skip-git-repo-check "<prompt>"
-	args := []string{"exec"}
-	if skipGitRepoCheck {
-		args = append(args, "--skip-git-repo-check")
-	}
-	if strings.TrimSpace(codexModel) != "" {
-		args = append(args, "--model", codexModel)
-	}
-	args = append(args, prompt)
-
-	start := time.Now()
-	if strings.TrimSpace(codexModel) != "" {
-		log.Printf("⏱️ crawl started url=%s model=%s", url, codexModel)
-	} else {
-		log.Printf("⏱️ crawl started url=%s", url)
-	}
-	cmd := exec.Command(codexCmd, args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			msg = err.Error()
-		}
-		log.Printf("⏱️ crawl failed url=%s duration=%s err=%s", url, time.Since(start).Round(time.Millisecond), msg)
-		return "", fmt.Errorf("codex exec failed: %s", msg)
-	}
-	log.Printf("⏱️ crawl finished url=%s duration=%s", url, time.Since(start).Round(time.Millisecond))
-	return strings.TrimSpace(stdout.String()), nil
-}
-
-func parseResult(raw string) (Result, error) {
+func parseResult(toolName string, raw string) (Result, error) {
 	var parsed any
 	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
-		return nil, fmt.Errorf("invalid JSON from codex: %w", err)
+		if strings.TrimSpace(toolName) == "" {
+			toolName = "tool"
+		}
+		return nil, fmt.Errorf("invalid JSON from %s: %w", toolName, err)
 	}
 	obj, ok := parsed.(map[string]any)
 	if !ok {
