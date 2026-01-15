@@ -9,7 +9,8 @@ Performance rules (important):
 - Do NOT call `fetch`, `XMLHttpRequest`, or any Shopee APIs. Only read already-present DOM/HTML.
 
 Task:
-1) Navigate to this Shopee product URL: {{URL}}
+0) Open a new tab via DevTools (`new_page`). Record the returned page index; call it `pageIdx`.
+1) Navigate to this Shopee product URL: {{URL}} (do this in the new tab you just opened).
 2) Wait until the page is ready:
    - document.readyState === "complete", AND
    - EITHER a title is present (meta/h1) OR a price-like string is present in the page text OR JSON-LD Product is present.
@@ -38,6 +39,7 @@ Task:
      - Avoid crossed-out prices: ignore text inside `<del>/<s>` and ignore elements with computed `textDecorationLine` containing `"line-through"`.
    - If the page is not blocked and you still cannot get a non-empty `title` OR a valid `price` OR a non-empty `description`,
      return status="error" with a short reason (what was missing).
+4) ALWAYS close the tab you opened in step (0) via DevTools (`close_page` with `pageIdx`), regardless of success or failure.
 
 Output contract (JSON ONLY, no markdown):
 {
