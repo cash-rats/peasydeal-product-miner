@@ -1,6 +1,8 @@
 package fx
 
 import (
+	"strings"
+
 	"peasydeal-product-miner/config"
 	"peasydeal-product-miner/internal/app/inngest"
 	"peasydeal-product-miner/internal/app/inngest/crawl"
@@ -27,6 +29,11 @@ func registerFunctions(
 	crawlFunc *crawl.CrawlFunction,
 	logger *zap.SugaredLogger,
 ) error {
+	if cfg != nil && strings.TrimSpace(cfg.Inngest.AppID) == "" {
+		logger.Infow("inngest_disabled", "reason", "missing INNGEST_APP_ID")
+		return nil
+	}
+
 	_, err := inngestgo.CreateFunction(
 		client,
 		inngestgo.FunctionOpts{

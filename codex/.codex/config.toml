@@ -11,5 +11,5 @@
 command = "sh"
 args = [
   "-lc",
-  "HOST_IP=$(getent hosts host.docker.internal | awk '{print $1}' | head -n 1); exec npx -y chrome-devtools-mcp@latest --browser-url=http://${HOST_IP}:9222",
+  "exec npx -y chrome-devtools-mcp@latest --browser-url=http://host.docker.internal:9222",
 ]

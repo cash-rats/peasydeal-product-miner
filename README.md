@@ -65,7 +65,6 @@ Results land in `out/`.
 
 - `CHROME_DEBUG_PORT` (default `9222`): DevTools port used by `cmd/devtool`
 - `CHROME_PROFILE_DIR` (default `$HOME/chrome-mcp-profiles/shopee`): dedicated Chrome profile directory for crawling
-- `CODEX_CMD` (default `codex`): Codex CLI command used by the runner
 - `CODEX_MODEL` (optional): pass `--model` to `codex exec` (use a faster model to reduce crawl latency)
 - `TARGET_URL` (Docker): URL used by `docker compose` / `make docker-once`
 
@@ -128,7 +127,9 @@ Do not expose port `9222` to your LAN/Internet; a DevTools session can fully con
 
 ## VPS HTTP Server (FX + chi)
 
-This repo also includes a long-lived HTTP server skeleton (Uber FX + chi) with a basic health endpoint.
+This repo also includes a long-lived HTTP server (Uber FX + chi) with:
+- `GET /health`
+- an optional Inngest endpoint at `POST/PUT/GET /api/inngest` (used to receive crawl jobs)
 
 Run:
 
@@ -147,3 +148,35 @@ Optional env vars (all have defaults; Postgres/Redis are disabled unless configu
 - `LOG_LEVEL` (default `info`)
 - Postgres (enabled only when `DB_HOST` + `DB_NAME` are set): `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`
 - Redis (enabled only when `REDIS_HOST` is set): `REDIS_USER`, `REDIS_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_SCHEME`
+
+## Docker: Long-Lived Server (Inngest Worker)
+
+This is the “just edit `.env` then `docker compose up`” path for running the Inngest worker server in a container.
+
+1) Start host Chrome first:
+
+```bash
+make dev-chrome
+```
+
+2) Create `.env`:
+
+```bash
+cp .env.example .env
+```
+
+3) Bring up the server:
+
+```bash
+docker compose up --build server
+```
+
+Verify:
+
+```bash
+curl -sS http://127.0.0.1:${APP_PORT:-3012}/health
+```
+
+Notes:
+- The container expects host Chrome DevTools at `http://${CHROME_DEBUG_HOST:-host.docker.internal}:${CHROME_DEBUG_PORT:-9222}`.
+- Codex/Gemini auth + MCP config are persisted via `./codex` and `./gemini` volume mounts.
