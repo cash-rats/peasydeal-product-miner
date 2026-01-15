@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 )
+
+const defaultCodexModel = "gpt-5.2"
 
 type CodexRunnerConfig struct {
 	Cmd              string
@@ -41,14 +44,23 @@ func (r *CodexRunner) Run(url string, prompt string) (string, error) {
 	if r.skipGitRepoCheck {
 		args = append(args, "--skip-git-repo-check")
 	}
-	if strings.TrimSpace(r.model) != "" {
-		args = append(args, "--model", r.model)
+
+	model := strings.TrimSpace(r.model)
+	if model == "" {
+		if envModel := strings.TrimSpace(os.Getenv("CODEX_MODEL")); envModel != "" {
+			model = envModel
+		} else {
+			model = defaultCodexModel
+		}
+	}
+	if model != "" {
+		args = append(args, "--model", model)
 	}
 	args = append(args, prompt)
 
 	start := time.Now()
-	if strings.TrimSpace(r.model) != "" {
-		log.Printf("⏱️ crawl started tool=codex url=%s model=%s", url, r.model)
+	if model != "" {
+		log.Printf("⏱️ crawl started tool=codex url=%s model=%s", url, model)
 	} else {
 		log.Printf("⏱️ crawl started tool=codex url=%s", url)
 	}
