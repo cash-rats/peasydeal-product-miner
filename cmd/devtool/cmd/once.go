@@ -18,6 +18,7 @@ func newOnceCmd() *cobra.Command {
 		promptFile string
 		outDir     string
 		model      string
+		tool       string
 	)
 
 	cmd := &cobra.Command{
@@ -32,8 +33,9 @@ func newOnceCmd() *cobra.Command {
 				URL:              url,
 				PromptFile:       promptFile,
 				OutDir:           outDir,
-				CodexCmd:         envutil.String(os.Getenv, "CODEX_CMD", "codex"),
-				CodexModel:       model,
+				Tool:             tool,
+				Cmd:              envutil.String(os.Getenv, "CODEX_CMD", ""),
+				Model:            model,
 				SkipGitRepoCheck: envutil.Bool(os.Getenv, "CODEX_SKIP_GIT_REPO_CHECK", false),
 			})
 			if outPath != "" {
@@ -53,6 +55,7 @@ func newOnceCmd() *cobra.Command {
 	cmd.Flags().StringVar(&url, "url", "", "Shopee product URL")
 	cmd.Flags().StringVar(&promptFile, "prompt-file", "", "Prompt template file path (optional; auto-selected by URL when empty)")
 	cmd.Flags().StringVar(&outDir, "out-dir", "out", "Output directory for result JSON")
-	cmd.Flags().StringVar(&model, "model", envutil.String(os.Getenv, "CODEX_MODEL", ""), "Codex model override (optional; also via CODEX_MODEL)")
+	cmd.Flags().StringVar(&model, "model", envutil.String(os.Getenv, "CODEX_MODEL", ""), "Model override (optional; also via CODEX_MODEL)")
+	cmd.Flags().StringVar(&tool, "tool", "codex", "Tool to use (codex or gemini)")
 	return cmd
 }

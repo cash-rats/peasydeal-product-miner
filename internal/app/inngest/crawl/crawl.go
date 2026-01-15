@@ -107,7 +107,7 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 		outPath, result, err := runner.RunOnce(runner.Options{
 			URL:              url,
 			OutDir:           outDir,
-			CodexModel:       "gpt-5.2",
+			Model:            "gpt-5.2",
 			SkipGitRepoCheck: true,
 		})
 

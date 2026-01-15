@@ -1,5 +1,5 @@
 # Template image for running the Go runner.
-# NOTE: You still need to install/configure `codex` and ensure MCP is configured at runtime.
+# NOTE: You still need to install/configure `codex`/`gemini` and ensure MCP is configured at runtime.
 
 FROM golang:1.22-bookworm AS build
 
@@ -21,15 +21,17 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# Install Codex CLI inside the image (requires network access during build).
-# If your Codex package name differs, override at build time:
-#   docker build --build-arg CODEX_NPM_PKG=... .
+# Install Codex and Gemini CLI inside the image (requires network access during build).
+# If your package names differ, override at build time:
+#   docker build --build-arg CODEX_NPM_PKG=... --build-arg GEMINI_NPM_PKG=... .
 ARG CODEX_NPM_PKG=@openai/codex
-RUN npm install -g "${CODEX_NPM_PKG}"
+ARG GEMINI_NPM_PKG=@google/gemini-cli
+RUN npm install -g "${CODEX_NPM_PKG}" "${GEMINI_NPM_PKG}"
 
 RUN chmod +x /app/runner
 
 # Expected runtime mounts:
 # - /out for results
 # - /codex for ~/.codex (HOME=/codex)
+# - /gemini for ~/.gemini (HOME=/gemini)
 CMD ["/app/runner", "--help"]
