@@ -10,8 +10,11 @@
   },
   "mcpServers": {
     "chrome-devtools": {
-      "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest", "--browser-url=http://host.docker.internal:9222"],
+      "command": "sh",
+      "args": [
+        "-lc",
+        "exec npx -y chrome-devtools-mcp@latest --browser-url=http://${CHROME_DEBUG_HOST:-127.0.0.1}:${CHROME_DEBUG_PORT:-9222}"
+      ],
       "trust": true
     }
   },

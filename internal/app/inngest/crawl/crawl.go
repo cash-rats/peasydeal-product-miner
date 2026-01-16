@@ -3,12 +3,10 @@ package crawl
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"peasydeal-product-miner/config"
-	"peasydeal-product-miner/internal/envutil"
 	"peasydeal-product-miner/internal/pkg/chromedevtools"
 	"peasydeal-product-miner/internal/runner"
 
@@ -61,14 +59,13 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 			"doing", "check Chrome DevTools is reachable",
 		)
 
-		host := envutil.String(os.Getenv, "CHROME_DEBUG_HOST", chromedevtools.DefaultHost)
-		checkURL := chromedevtools.VersionURL(host, f.cfg.Chrome.DebugPort)
+		checkURL := chromedevtools.VersionURL(f.cfg.Chrome.DebugHost, f.cfg.Chrome.DebugPort)
 		if _, err := chromedevtools.CheckReachable(ctx, checkURL, 3*time.Second); err != nil {
 			f.logger.Errorw(
 				"inngest_step_failed",
 				"step", "check-devtools",
 				"doing", "check Chrome DevTools is reachable",
-				"host", host,
+				"host", f.cfg.Chrome.DebugHost,
 				"err", err,
 			)
 			return nil, inngestgo.NoRetryError(err)

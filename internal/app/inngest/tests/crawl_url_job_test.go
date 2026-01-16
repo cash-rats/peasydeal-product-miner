@@ -28,7 +28,7 @@ func (s *CrawlURLJobTestSuite) SetupTest() {
 	s.app = fx.New(
 		fx.Provide(func() *viper.Viper {
 			vp := config.NewViper()
-			vp.Set("inngest.dev", "1")
+			vp.Set("inngest.dev", "http://localhost:8288")
 			vp.Set("inngest.app_id", "test-app")
 			return vp
 		}),

@@ -1,0 +1,17 @@
+2026-01-16T06:30:03.798206Z  INFO codex_core::config: cwd not set, using current dir
+2026-01-16T06:30:05.206160Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): chrome-devtools-mcp exposes content of the browser instance to the MCP clients allowing them to inspect,
+2026-01-16T06:30:05.206187Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): debug, and modify any data in the browser or DevTools.
+2026-01-16T06:30:05.206189Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): Avoid sharing sensitive or personal information that you do not want to share with MCP clients.
+2026-01-16T06:30:43.583103Z  INFO codex_core::stream_events_utils: ToolCall: mcp__chrome-devtools-mcp__new_page {"url":"https://www.google.com","timeout":0}
+2026-01-16T06:31:02.006713Z  INFO codex_core::codex::handlers: Shutting down Codex instance
+2026-01-16T06:31:02.025344Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): npm notice
+2026-01-16T06:31:02.025391Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): npm notice New major version of npm available! 10.8.2 -> 11.7.0
+2026-01-16T06:31:02.025394Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.7.0
+2026-01-16T06:31:02.025398Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): npm notice To update run: npm install -g npm@11.7.0
+2026-01-16T06:31:02.025400Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): npm notice
+2026-01-16T06:59:06.412787Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): chrome-devtools-mcp exposes content of the browser instance to the MCP clients allowing them to inspect,
+2026-01-16T06:59:06.412819Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): debug, and modify any data in the browser or DevTools.
+2026-01-16T06:59:06.412822Z  INFO codex_rmcp_client::rmcp_client: MCP server stderr (sh): Avoid sharing sensitive or personal information that you do not want to share with MCP clients.
+2026-01-16T06:59:19.586303Z  INFO codex_core::stream_events_utils: ToolCall: shell_command {"command":"curl -I https://www.google.com","workdir":"/app","sandbox_permissions":"require_escalated","justification":"Network access is needed to check connectivity to google.com."}
+2026-01-16T06:59:30.630410Z  INFO codex_core::codex: interrupt received: abort current task, if any
+2026-01-16T06:59:30.789953Z  INFO codex_core::codex::handlers: Shutting down Codex instance

@@ -14,7 +14,7 @@ The crawler writes **JSON files** to `out/` that must conform to `config/schema.
 
 ### 0) Prerequisites
 
-- Go 1.22+
+- Go 1.24+
 - Codex CLI installed on your host
 - Node.js available (for `npx chrome-devtools-mcp@latest`)
 - Google Chrome installed
@@ -26,6 +26,8 @@ make dev-chrome
 ```
 
 This launches Chrome with:
+- `--remote-debugging-address=$CHROME_DEBUG_BIND_ADDR` (default `127.0.0.1`; use `0.0.0.0` when the crawler runs in Docker)
+- `--remote-debugging-host=$CHROME_DEBUG_BIND_ADDR` (compat flag; same value)
 - `--remote-debugging-port=9222`
 - `--user-data-dir=...` (non-default; required for Chrome 136+)
 
@@ -40,6 +42,20 @@ codex mcp add chrome-devtools-mcp -- \
 ```
 
 This updates your host Codex config (typically `~/.codex/config.toml`).
+
+### 2b) One-time: connect Gemini to that Chrome
+
+Gemini CLI reads MCP servers from `GEMINI_HOME` (this repo includes `gemini/settings.json`).
+
+To use the repo’s config on the host:
+
+```bash
+export GEMINI_HOME="$PWD/gemini"
+export CHROME_DEBUG_HOST=127.0.0.1
+export CHROME_DEBUG_PORT=9222
+```
+
+Then run `gemini` normally; it will launch `chrome-devtools-mcp` via the configured MCP server.
 
 ### 3) Verify the devtools connection
 
@@ -178,5 +194,8 @@ curl -sS http://127.0.0.1:${APP_PORT:-3012}/health
 ```
 
 Notes:
+- The `server` container always binds to `0.0.0.0` internally so the published port works (even if your `.env` uses `APP_ADDR=localhost` for host runs).
 - The container expects host Chrome DevTools at `http://${CHROME_DEBUG_HOST:-host.docker.internal}:${CHROME_DEBUG_PORT:-9222}`.
+- For Docker, start Chrome with `CHROME_DEBUG_BIND_ADDR=0.0.0.0 make dev-chrome` so the container can reach the DevTools port.
+- If you're using `inngest-cli dev` on the host, set `INNGEST_DEV=http://host.docker.internal:8288` so the container can register/sync with the dev server.
 - Codex/Gemini auth + MCP config are persisted via `./codex` and `./gemini` volume mounts.

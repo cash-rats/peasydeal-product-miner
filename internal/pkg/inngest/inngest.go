@@ -3,8 +3,8 @@ package inngest
 import (
 	"context"
 	"errors"
-	"net/url"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"peasydeal-product-miner/config"
@@ -21,29 +21,41 @@ func NewInngestClient(cfg *config.Config) (inngestgo.Client, error) {
 		return disabledClient{reason: "inngest disabled: set INNGEST_APP_ID to enable"}, nil
 	}
 
-	scheme := "https"
-	if cfg.Inngest.Dev == "1" {
-		scheme = "http"
-	}
-
+	dev := strings.TrimSpace(cfg.Inngest.Dev)
 	opts := inngestgo.ClientOpts{
 		AppID: appID,
-		Dev:   inngestgo.BoolPtr(cfg.Inngest.Dev == "1"),
+		Dev:   inngestgo.BoolPtr(dev != ""),
+	}
+
+	// If cfg.Inngest.Dev is a URL (eg "http://localhost:8288"), force the SDK to use it
+	// for API + event endpoints. This avoids relying on process env var INNGEST_DEV which
+	// may differ from our Viper-derived config (notably in tests).
+	if u, err := url.Parse(dev); err == nil && u.Host != "" {
+		base := strings.TrimRight(dev, "/")
+		opts.APIBaseURL = &base
+		opts.EventAPIBaseURL = &base
 	}
 
 	if signingKey := strings.TrimSpace(cfg.Inngest.SigningKey); signingKey != "" {
 		opts.SigningKey = &signingKey
 	}
+
 	c, err := inngestgo.NewClient(opts)
 	if err != nil {
 		return nil, err
 	}
 
 	if serveHost := strings.TrimSpace(cfg.Inngest.ServeHost); serveHost != "" {
+		scheme := "https"
+		if dev != "" {
+			scheme = "http"
+		}
+
 		servePath := strings.TrimSpace(cfg.Inngest.ServePath)
 		if servePath == "" {
 			servePath = DefaultServePath
 		}
+
 		c.SetURL(&url.URL{
 			Scheme: scheme,
 			Host:   serveHost,
@@ -85,4 +97,4 @@ func (c disabledClient) ServeWithOpts(opts inngestgo.ServeOpts) http.Handler {
 }
 
 func (c disabledClient) SetOptions(opts inngestgo.ClientOpts) error { return errInngestDisabled }
-func (c disabledClient) SetURL(u *url.URL)                           {}
+func (c disabledClient) SetURL(u *url.URL)                          {}

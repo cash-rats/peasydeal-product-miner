@@ -1,7 +1,7 @@
 # Template image for running the Go runner.
 # NOTE: You still need to install/configure `codex`/`gemini` and ensure MCP is configured at runtime.
 
-FROM golang:1.22-bookworm AS build
+FROM golang:1.25-bookworm AS build
 
 WORKDIR /src
 COPY go.mod go.sum /src/
@@ -26,7 +26,7 @@ COPY --from=build /out/runner /app/runner
 COPY --from=build /out/server /app/server
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
+  && apt-get install -y --no-install-recommends ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Codex and Gemini CLI inside the image (requires network access during build).
