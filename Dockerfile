@@ -21,6 +21,7 @@ FROM node:20-bookworm-slim
 WORKDIR /app
 
 COPY config/ /app/config/
+COPY entrypoint.sh /app/entrypoint.sh
 
 COPY --from=build /out/runner /app/runner
 COPY --from=build /out/server /app/server
@@ -38,9 +39,11 @@ RUN npm install -g "${CODEX_NPM_PKG}" "${GEMINI_NPM_PKG}"
 
 RUN chmod +x /app/runner
 RUN chmod +x /app/server
+RUN chmod +x /app/entrypoint.sh
 
 # Expected runtime mounts:
 # - /out for results
-# - /codex for ~/.codex (HOME=/codex)
-# - /gemini for ~/.gemini (HOME=/gemini)
+# - /codex for Codex credential store (bind-mounted)
+# - /gemini for Gemini credential store + settings (bind-mounted)
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["/app/runner", "--help"]

@@ -8,10 +8,21 @@
 /out/
 
 # Local Codex state (optional)
+/codex/.codex/*
+!/codex/.codex/config.toml
 /codex/.codex/auth.json
 /codex/.codex/sessions/
 /codex/.codex/skills/
+/codex/.codex/log/
+/codex/.codex/tmp/
 /codex/.npm/
+/codex/.gemini/
+/codex/.cache/
+
+# Local Gemini state (optional)
+/gemini/.gemini/
+/gemini/.cache/
+/gemini/.npm/
 
 # Local Go build state
 **/.gocache/

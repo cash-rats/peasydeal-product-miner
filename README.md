@@ -198,4 +198,5 @@ Notes:
 - The container expects host Chrome DevTools at `http://${CHROME_DEBUG_HOST:-host.docker.internal}:${CHROME_DEBUG_PORT:-9222}`.
 - For Docker, start Chrome with `CHROME_DEBUG_BIND_ADDR=0.0.0.0 make dev-chrome` so the container can reach the DevTools port.
 - If you're using `inngest-cli dev` on the host, set `INNGEST_DEV=http://host.docker.internal:8288` so the container can register/sync with the dev server.
-- Codex/Gemini auth + MCP config are persisted via `./codex` and `./gemini` volume mounts.
+- Codex/Gemini auth is persisted via `./codex/.codex` and `./gemini/.gemini` volume mounts.
+- Containers use `HOME=/home/app` and symlink `~/.codex` → `/codex/.codex`, `~/.gemini` → `/gemini/.gemini` (see `entrypoint.sh`).
