@@ -196,6 +196,8 @@ curl -sS http://127.0.0.1:${APP_PORT:-3012}/health
 Notes:
 - The `server` container always binds to `0.0.0.0` internally so the published port works (even if your `.env` uses `APP_ADDR=localhost` for host runs).
 - The container expects host Chrome DevTools at `http://${CHROME_DEBUG_HOST:-host.docker.internal}:${CHROME_DEBUG_PORT:-9222}`.
+- In Docker, the DevTools hostname is resolved to an IPv4 address before checking `/json/version` (helps avoid IPv6/hostname quirks).
+- In Docker, `/app/out` is symlinked to `/out` so relative `out/` writes land in the host-mounted `./out`.
 - For Docker, start Chrome with `CHROME_DEBUG_BIND_ADDR=0.0.0.0 make dev-chrome` so the container can reach the DevTools port.
 - If you're using `inngest-cli dev` on the host, set `INNGEST_DEV=http://host.docker.internal:8288` so the container can register/sync with the dev server.
 - Codex/Gemini auth is persisted via `./codex/.codex` and `./gemini/.gemini` volume mounts.

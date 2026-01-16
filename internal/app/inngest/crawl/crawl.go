@@ -59,13 +59,19 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 			"doing", "check Chrome DevTools is reachable",
 		)
 
-		checkURL := chromedevtools.VersionURL(f.cfg.Chrome.DebugHost, f.cfg.Chrome.DebugPort)
+		checkURL, effectiveHost := chromedevtools.VersionURLResolved(ctx, f.cfg.Chrome.DebugHost, f.cfg.Chrome.DebugPort)
+		if strings.TrimSpace(f.cfg.Chrome.DebugHost) != "" && effectiveHost != strings.TrimSpace(f.cfg.Chrome.DebugHost) {
+			f.logger.Infow("chrome_devtools_host_resolved",
+				"from", f.cfg.Chrome.DebugHost,
+				"to", effectiveHost,
+			)
+		}
 		if _, err := chromedevtools.CheckReachable(ctx, checkURL, 3*time.Second); err != nil {
 			f.logger.Errorw(
 				"inngest_step_failed",
 				"step", "check-devtools",
 				"doing", "check Chrome DevTools is reachable",
-				"host", f.cfg.Chrome.DebugHost,
+				"host", effectiveHost,
 				"err", err,
 			)
 			return nil, inngestgo.NoRetryError(err)
