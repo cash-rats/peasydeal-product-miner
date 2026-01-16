@@ -20,7 +20,9 @@
 /codex/.cache/
 
 # Local Gemini state (optional)
-/gemini/.gemini/
+/gemini/.gemini/*
+!/gemini/.gemini/settings.json
+/gemini/.gemini/tmp/
 /gemini/.cache/
 /gemini/.npm/
 

@@ -6,8 +6,6 @@ services:
     environment:
       - HOME=/home/app
 
-      - GEMINI_CLI_SYSTEM_SETTINGS_PATH=/gemini/settings.json
-
       # Bind to all interfaces inside the container so the published port works.
       # (If APP_ADDR=localhost, the server will only bind to container loopback and won't be reachable from the host.)
       - APP_ADDR=0.0.0.0
@@ -39,7 +37,6 @@ services:
       dockerfile: Dockerfile
     environment:
       - HOME=/home/app
-      - GEMINI_HOME=/gemini
       - CODEX_SKIP_GIT_REPO_CHECK=${CODEX_SKIP_GIT_REPO_CHECK:-1}
       - TARGET_URL=${TARGET_URL:-}
     stdin_open: true

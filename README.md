@@ -45,12 +45,12 @@ This updates your host Codex config (typically `~/.codex/config.toml`).
 
 ### 2b) One-time: connect Gemini to that Chrome
 
-Gemini CLI reads MCP servers from `GEMINI_HOME` (this repo includes `gemini/settings.json`).
+Gemini CLI reads MCP servers from its settings file (this repo tracks `gemini/.gemini/settings.json`).
 
 To use the repo’s config on the host:
 
 ```bash
-export GEMINI_HOME="$PWD/gemini"
+export GEMINI_CLI_SYSTEM_SETTINGS_PATH="$PWD/gemini/.gemini/settings.json"
 export CHROME_DEBUG_HOST=127.0.0.1
 export CHROME_DEBUG_PORT=9222
 ```
