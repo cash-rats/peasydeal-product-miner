@@ -61,39 +61,18 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 		if msg == "" {
 			msg = err.Error()
 		}
-		if os.Getenv("RUNNER_DEBUG_GEMINI") == "1" {
-			logGeminiDebugOutput(stdout.String(), stderr.String())
-		}
+
 		log.Printf("⏱️ crawl failed tool=gemini url=%s duration=%s err=%s", url, time.Since(start).Round(time.Millisecond), msg)
 		return "", fmt.Errorf("gemini failed: %s", msg)
 	}
 
 	log.Printf("⏱️ crawl finished tool=gemini url=%s duration=%s", url, time.Since(start).Round(time.Millisecond))
-	if os.Getenv("RUNNER_DEBUG_GEMINI") == "1" {
-		logGeminiDebugOutput(stdout.String(), stderr.String())
-	}
 
 	raw := strings.TrimSpace(stdout.String())
 	if unwrapped, ok := unwrapGeminiJSON(raw); ok {
 		return sanitizeGeminiResponse(unwrapped), nil
 	}
 	return sanitizeGeminiResponse(raw), nil
-}
-
-func logGeminiDebugOutput(stdout string, stderr string) {
-	const maxBytes = 4000
-	stdout = strings.TrimSpace(stdout)
-	stderr = strings.TrimSpace(stderr)
-	if len(stdout) > maxBytes {
-		stdout = stdout[:maxBytes] + "...(truncated)"
-	}
-	if len(stderr) > maxBytes {
-		stderr = stderr[:maxBytes] + "...(truncated)"
-	}
-	log.Printf("🔎 gemini debug stdout=%q", stdout)
-	if stderr != "" {
-		log.Printf("🔎 gemini debug stderr=%q", stderr)
-	}
 }
 
 // unwrapGeminiJSON extracts the tool's "response" field when Gemini is invoked with `-o json`.
