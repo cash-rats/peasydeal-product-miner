@@ -1,39 +1,135 @@
 You are controlling an already-running Google Chrome via Chrome DevTools.
 
-Goal: extract a minimal product payload (title + price) from a Taobao item page as fast as possible.
+Goal: extract a minimal but complete product payload (title + price + description + images) from a Taobao item page as fast as possible.
 
 Task:
-1) Navigate to this Taobao item URL: {{URL}}
-2) Wait until the page is ready:
-   - document.readyState === "complete", AND
-   - a product title is present OR a visible price is present OR page contains embedded product JSON/state.
-3) Detect blocking walls early:
-   - If the page shows login / verification / CAPTCHA / bot checks (e.g., login prompts, "验证码", "驗證", "captcha", "robot", slider verification),
-     return status="needs_manual" with notes explaining what you saw.
-4) Extract data (minimal):
-   - Prefer embedded JSON/state if it is easy to access; otherwise use DOM text.
-   - Extract:
-     - product title (string)
-     - sale price (number or numeric string; if a range is shown, use the minimum)
-     - currency (string, e.g., "CNY") if visible/obvious; otherwise omit.
+
+Navigate to this Taobao item URL: {{URL}}
+
+Wait until the page is ready:
+
+document.readyState === "complete", AND
+
+a product title is present OR a visible price is present OR page contains embedded product JSON/state.
+
+Detect blocking walls early:
+
+If the page shows login / verification / CAPTCHA / bot checks
+(e.g., login prompts, "验证码", "驗證", "captcha", "robot", slider verification),
+return status="needs_manual" with notes explaining what you saw.
+
+Extract data (minimal, fast, non-interactive):
+
+Prefer embedded JSON/state if it is easy to access; otherwise use DOM text.
+
+Do NOT scroll, click, or trigger lazy-loading intentionally.
+
+Extract fields:
+
+product title (string)
+
+sale price (number or numeric string; if a range is shown, use the minimum)
+
+product description (string; optional)
+
+product images (array of URLs)
+
+description images (array of URLs)
+
+currency (string, e.g., "CNY") if visible/obvious; otherwise omit.
+
+Image extraction rules:
+
+pics[] (ALL product images):
+
+Collect all reachable product-related image URLs, including:
+
+Main gallery images
+
+Thumbnail images
+
+SKU/variant images
+
+Images found in embedded product JSON/state
+
+Normalize image URLs:
+
+Convert protocol-relative URLs (//) to https://
+
+Remove size suffixes if obvious (e.g., _50x50.jpg → .jpg)
+
+Deduplicate URLs.
+
+Exclude obvious UI/decoration icons (logos, arrows, buttons).
+
+description & description_pics[] handling:
+
+If description is TEXT:
+
+Put cleaned plain text into "description"
+
+Do NOT include description images in description text
+
+If description is IMAGE-BASED or MIXED:
+
+Extract all description-area image URLs into description_pics[]
+
+If there is no meaningful text, omit "description"
+
+Common sources:
+
+Embedded JSON fields (descImages, detailImages, descriptionImages, etc.)
+
+DOM inside description container or description iframe (if already loaded)
+
+Do NOT wait for iframe loading; extract only what is already available.
+
+Description rules:
+
+Prefer short, meaningful summary text if available.
+
+Strip HTML, excessive whitespace, duplicated title text.
+
+If description requires interaction or async loading, omit it.
 
 Output contract (JSON ONLY, no markdown, no extra keys):
+
 {
-  "url": "string",
-  "status": "ok | needs_manual | error",
-  "captured_at": "ISO-8601 UTC timestamp",
-  "notes": "string (required when status=needs_manual)",
-  "error": "string (required when status=error)",
-  "title": "string",
-  "price": "number or numeric string",
-  "currency": "string (optional, e.g., CNY)"
+"url": "string",
+"status": "ok | needs_manual | error",
+"captured_at": "ISO-8601 UTC timestamp",
+"notes": "string (required when status=needs_manual)",
+"error": "string (required when status=error)",
+"title": "string",
+"price": "number or numeric string",
+"description": "string (optional)",
+"pics": ["string"],
+"description_pics": ["string"],
+"currency": "string (optional, e.g., CNY)"
 }
 
 Rules:
-- If status="ok": include title and price (and currency when obvious).
-- If status="needs_manual": include notes describing the wall.
-- If status="error": include error (string) with the failure reason.
-- Normalize price:
-  - Strip currency symbols, commas, spaces; keep only digits and an optional decimal point.
-  - If the page shows a range, use the minimum.
 
+If status="ok":
+
+title and price are REQUIRED.
+
+pics[] MUST be included (empty array allowed if none found).
+
+description and description_pics are optional.
+
+If status="needs_manual":
+
+Include notes describing the blocking wall.
+
+If status="error":
+
+Include error with the failure reason.
+
+Price normalization:
+
+Strip currency symbols, commas, spaces.
+
+Keep only digits and an optional decimal point.
+
+If a range is shown, use the minimum value.
