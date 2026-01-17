@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 
 	appfx "peasydeal-product-miner/internal/app/fx"
 	"peasydeal-product-miner/internal/envutil"
@@ -55,7 +55,7 @@ func newOnceCmd() *cobra.Command {
 					runnerPkg.NewService,
 				),
 
-				fx.Invoke(func(svc *runner.Service) {
+				fx.Invoke(func(svc *runner.Service, logger *zap.SugaredLogger) {
 					outPath, _, err := svc.RunOnce(runnerPkg.Options{
 						URL:        url,
 						PromptFile: promptFile,
@@ -64,11 +64,17 @@ func newOnceCmd() *cobra.Command {
 					})
 
 					if outPath != "" {
-						fmt.Println(outPath)
+						logger.Infow(
+							"✅ crawl success",
+							"output_path", outPath,
+						)
 					}
 
 					if err != nil {
-						fmt.Fprintln(os.Stderr, "ERROR:", err)
+						logger.Errorw("❌ Woops, failed to crawl",
+							"std_error:", os.Stderr,
+							"err", err,
+						)
 					}
 				}),
 			)
