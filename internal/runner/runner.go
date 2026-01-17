@@ -47,6 +47,10 @@ type Options struct {
 }
 
 func RunOnce(opts Options) (string, Result, error) {
+	return runOnce(opts, NewToolRunnerFromOptions)
+}
+
+func runOnce(opts Options, toolRunnerFromOptions func(Options) (ToolRunner, error)) (string, Result, error) {
 	if strings.TrimSpace(opts.URL) == "" {
 		return "", nil, fmt.Errorf("missing URL")
 	}
@@ -91,7 +95,7 @@ func RunOnce(opts Options) (string, Result, error) {
 		return outPath, r, err
 	}
 
-	tr, err := NewToolRunnerFromOptions(opts)
+	tr, err := toolRunnerFromOptions(opts)
 	if err != nil {
 		r := errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, r)

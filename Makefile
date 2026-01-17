@@ -59,10 +59,6 @@ docker-once: docker-doctor
 docker-doctor:
 	go run ./cmd/devtool docker-doctor
 
-.PHONY: docker-shell
-docker-shell:
-	docker compose run --rm runner sh
-
 .PHONY: docker-codex-login
 docker-codex-login:
 	@if [[ -f "/.dockerenv" ]]; then echo "Run this on the host (not inside Docker), so your browser can reach the local callback server."; exit 2; fi

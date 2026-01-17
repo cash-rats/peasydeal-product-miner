@@ -7,9 +7,13 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/fx"
 
+	appfx "peasydeal-product-miner/internal/app/fx"
 	"peasydeal-product-miner/internal/envutil"
+	"peasydeal-product-miner/internal/runner"
 	runnerPkg "peasydeal-product-miner/internal/runner"
+	runnerFx "peasydeal-product-miner/internal/runner/fx"
 )
 
 func newOnceCmd() *cobra.Command {
@@ -29,25 +33,50 @@ func newOnceCmd() *cobra.Command {
 				return errors.New("missing required flag: --url")
 			}
 
-			outPath, _, err := runnerPkg.RunOnce(runnerPkg.Options{
-				URL:              url,
-				PromptFile:       promptFile,
-				OutDir:           outDir,
-				Tool:             tool,
-				Cmd:              envutil.String(os.Getenv, "CODEX_CMD", ""),
-				Model:            model,
-				SkipGitRepoCheck: envutil.Bool(os.Getenv, "CODEX_SKIP_GIT_REPO_CHECK", false),
-			})
-			if outPath != "" {
-				fmt.Println(outPath)
-			}
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "ERROR:", err)
-			}
-			// If we managed to write an output file, treat crawl errors as non-fatal.
-			if err != nil && outPath == "" {
+			app := fx.New(
+				fx.Supply(
+					runnerPkg.CodexRunnerConfig{
+						Cmd:              "codex",
+						Model:            model,
+						SkipGitRepoCheck: true,
+					},
+					runnerPkg.GeminiRunnerConfig{
+						Cmd:   "gemini",
+						Model: model,
+					},
+				),
+
+				appfx.CoreAppOptions,
+				runnerFx.AsRunner(runnerPkg.NewCodexRunner),
+				runnerFx.AsRunner(runnerPkg.NewGeminiRunner),
+
+				fx.Provide(
+					runner.NewRunners,
+					runnerPkg.NewService,
+				),
+
+				fx.Invoke(func(svc *runner.Service) {
+					outPath, _, err := svc.RunOnce(runnerPkg.Options{
+						URL:        url,
+						PromptFile: promptFile,
+						OutDir:     outDir,
+						Tool:       tool,
+					})
+
+					if outPath != "" {
+						fmt.Println(outPath)
+					}
+
+					if err != nil {
+						fmt.Fprintln(os.Stderr, "ERROR:", err)
+					}
+				}),
+			)
+
+			if err := app.Start(cmd.Context()); err != nil {
 				return err
 			}
+
 			return nil
 		},
 	}

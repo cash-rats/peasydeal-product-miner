@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+/*
+ - [ ] Refactor with fx
+ - [ ] Ensure result is in valid json format
+*/
+
 type GeminiRunnerConfig struct {
 	Cmd   string
 	Model string
