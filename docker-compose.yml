@@ -1,14 +1,44 @@
 services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - HOME=/home/app
+
+      # Bind to all interfaces inside the container so the published port works.
+      # (If APP_ADDR=localhost, the server will only bind to container loopback and won't be reachable from the host.)
+      - APP_ADDR=0.0.0.0
+      - APP_PORT=${APP_PORT:-3012}
+
+      - CHROME_DEBUG_HOST=${CHROME_DEBUG_HOST:-host.docker.internal}
+      - CHROME_DEBUG_PORT=${CHROME_DEBUG_PORT:-9222}
+
+      - CRAWL_TOOL=${CRAWL_TOOL:-codex}
+      - CODEX_SKIP_GIT_REPO_CHECK=${CODEX_SKIP_GIT_REPO_CHECK:-1}
+
+      - INNGEST_DEV=${INNGEST_DEV:-1}
+      - INNGEST_APP_ID=${INNGEST_APP_ID:-peasydeal-product-miner}
+      - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY:-}
+      - INNGEST_SERVE_HOST=${INNGEST_SERVE_HOST:-}
+      - INNGEST_SERVE_PATH=${INNGEST_SERVE_PATH:-}
+    ports:
+      - "${APP_PORT:-3012}:${APP_PORT:-3012}"
+    volumes:
+      - ./out:/out
+      - ./config:/app/config:ro
+      - ./codex:/codex:rw
+      - ./gemini:/gemini:rw
+    command: ["/app/server"]
+
   runner:
     build:
       context: .
       dockerfile: Dockerfile
     environment:
-      - HOME=/codex
-      - GEMINI_HOME=/gemini
-      - CODEX_CMD=codex
+      - HOME=/home/app
       - CODEX_SKIP_GIT_REPO_CHECK=${CODEX_SKIP_GIT_REPO_CHECK:-1}
-      - TARGET_URL=${TARGET_URL}
+      - TARGET_URL=${TARGET_URL:-}
     stdin_open: true
     tty: true
     volumes:

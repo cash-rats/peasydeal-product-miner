@@ -8,10 +8,23 @@
 /out/
 
 # Local Codex state (optional)
+/codex/.codex/*
+!/codex/.codex/config.toml
 /codex/.codex/auth.json
 /codex/.codex/sessions/
 /codex/.codex/skills/
+/codex/.codex/log/
+/codex/.codex/tmp/
 /codex/.npm/
+/codex/.gemini/
+/codex/.cache/
+
+# Local Gemini state (optional)
+/gemini/.gemini/*
+!/gemini/.gemini/settings.json
+/gemini/.gemini/tmp/
+/gemini/.cache/
+/gemini/.npm/
 
 # Local Go build state
 **/.gocache/
@@ -22,4 +35,4 @@ __pycache__/
 *.pyc
 
 # Supabase
-supabase/.temp/
+supabase/*

@@ -17,6 +17,7 @@ import (
 
 func newChromeCmd() *cobra.Command {
 	var (
+		addr       string
 		port       string
 		profileDir string
 	)
@@ -25,6 +26,9 @@ func newChromeCmd() *cobra.Command {
 		Use:   "chrome",
 		Short: "Start Chrome with DevTools enabled (dedicated profile)",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if strings.TrimSpace(addr) == "" {
+				return errors.New("missing --addr")
+			}
 			if strings.TrimSpace(port) == "" {
 				return errors.New("missing --port")
 			}
@@ -39,6 +43,8 @@ func newChromeCmd() *cobra.Command {
 			case "darwin":
 				// macOS: use `open` so it starts as a normal app instance.
 				c := exec.Command("open", "-na", "Google Chrome", "--args",
+					"--remote-debugging-address="+addr,
+					"--remote-debugging-host="+addr,
 					"--remote-debugging-port="+port,
 					"--user-data-dir="+profileDir,
 				)
@@ -51,6 +57,8 @@ func newChromeCmd() *cobra.Command {
 					return err
 				}
 				c := exec.Command(bin,
+					"--remote-debugging-address="+addr,
+					"--remote-debugging-host="+addr,
 					"--remote-debugging-port="+port,
 					"--user-data-dir="+profileDir,
 				)
@@ -64,14 +72,16 @@ func newChromeCmd() *cobra.Command {
 			}
 
 			fmt.Printf("Chrome launch requested (port=%s, profile=%s)\n", port, profileDir)
-			fmt.Printf("DevTools check: http://127.0.0.1:%s/json/version\n", port)
+			fmt.Printf("DevTools check: http://%s:%s/json/version\n", addr, port)
 			return nil
 		},
 	}
 
+	defAddr := envutil.String(os.Getenv, "CHROME_DEBUG_BIND_ADDR", "127.0.0.1")
 	defPort := envutil.String(os.Getenv, "CHROME_DEBUG_PORT", "9222")
 	defProfile := envutil.String(os.Getenv, "CHROME_PROFILE_DIR", filepath.Join(userHomeDir(), "chrome-mcp-profiles", "shopee"))
 
+	cmd.Flags().StringVar(&addr, "addr", defAddr, "Chrome DevTools remote debugging bind address (use 0.0.0.0 for Docker access)")
 	cmd.Flags().StringVar(&port, "port", defPort, "Chrome DevTools remote debugging port")
 	cmd.Flags().StringVar(&profileDir, "profile-dir", defProfile, "Dedicated Chrome profile directory (non-default)")
 	return cmd

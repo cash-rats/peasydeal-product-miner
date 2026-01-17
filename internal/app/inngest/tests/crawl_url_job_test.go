@@ -28,7 +28,7 @@ func (s *CrawlURLJobTestSuite) SetupTest() {
 	s.app = fx.New(
 		fx.Provide(func() *viper.Viper {
 			vp := config.NewViper()
-			vp.Set("inngest.dev", "1")
+			vp.Set("inngest.dev", "http://localhost:8288")
 			vp.Set("inngest.app_id", "test-app")
 			return vp
 		}),
@@ -62,7 +62,7 @@ func (s *CrawlURLJobTestSuite) TestSendCrawlerURLRequested() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
-		targetURL := "https://shopee.tw/Logitech-%E7%BE%85%E6%8A%80-LIFT%E4%BA%BA%E9%AB%94%E5%B7%A5%E5%AD%B8%E5%9E%82%E7%9B%B4%E6%BB%91%E9%BC%A0-i.48032592.20201505683?extraParams=%7B%22display_model_id%22%3A87667287725%2C%22model_selection_logic%22%3A3%7D&sp_atk=71e79cbe-a632-43b5-83be-4370357fd0a9&xptdk=71e79cbe-a632-43b5-83be-4370357fd0a9"
+		targetURL := "https://shopee.tw/%E3%80%9024H%E7%8F%BE%E8%B2%A8%E3%80%91EVA%E6%8B%96%E9%9E%8B-%E6%8B%96%E9%9E%8B-%E5%AE%A4%E5%85%A7%E6%8B%96%E9%9E%8B-%E8%B8%A9%E5%B1%8E%E6%84%9F%E6%8B%96%E9%9E%8B-%E5%B1%85%E5%AE%B6%E6%8B%96%E9%9E%8B-%E7%94%B7%E5%A5%B3%E6%8B%96%E9%9E%8B-%E6%8B%96%E9%9E%8B-%E9%98%B2%E6%BB%91%E6%8B%96%E9%9E%8B-%E5%AE%A4%E5%85%A7%E6%8B%96%E9%9E%8B-%E6%B5%B4%E5%AE%A4%E6%8B%96%E9%9E%8B-%E5%B1%85%E5%AE%B6%E6%8B%96%E9%9E%8B%E9%9E%8B-i.263324923.7155287343?is_from_login=true"
 		eventID, err := crawl.EventIDForURL(targetURL)
 		s.Require().NoError(err)
 

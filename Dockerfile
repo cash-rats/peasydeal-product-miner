@@ -1,24 +1,33 @@
 # Template image for running the Go runner.
 # NOTE: You still need to install/configure `codex`/`gemini` and ensure MCP is configured at runtime.
 
-FROM golang:1.22-bookworm AS build
+FROM golang:1.25-bookworm AS build
 
 WORKDIR /src
-COPY go.mod /src/go.mod
+COPY go.mod go.sum /src/
+RUN go mod download
+
+COPY cmd/ /src/cmd/
 COPY internal/ /src/internal/
-COPY cmd/runner/ /src/cmd/runner/
-RUN cd /src && go build -o /out/runner ./cmd/runner
+COPY config/ /src/config/
+COPY db/ /src/db/
+COPY cache/ /src/cache/
+
+RUN go build -o /out/runner ./cmd/runner
+RUN go build -o /out/server ./cmd/server
 
 FROM node:20-bookworm-slim
 
 WORKDIR /app
 
 COPY config/ /app/config/
+COPY entrypoint.sh /app/entrypoint.sh
 
 COPY --from=build /out/runner /app/runner
+COPY --from=build /out/server /app/server
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
+  && apt-get install -y --no-install-recommends ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Codex and Gemini CLI inside the image (requires network access during build).
@@ -29,9 +38,12 @@ ARG GEMINI_NPM_PKG=@google/gemini-cli
 RUN npm install -g "${CODEX_NPM_PKG}" "${GEMINI_NPM_PKG}"
 
 RUN chmod +x /app/runner
+RUN chmod +x /app/server
+RUN chmod +x /app/entrypoint.sh
 
 # Expected runtime mounts:
 # - /out for results
-# - /codex for ~/.codex (HOME=/codex)
-# - /gemini for ~/.gemini (HOME=/gemini)
+# - /codex for Codex credential store (bind-mounted)
+# - /gemini for Gemini credential store + settings (bind-mounted)
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["/app/runner", "--help"]

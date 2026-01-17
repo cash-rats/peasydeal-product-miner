@@ -25,6 +25,7 @@ func NewViper() *viper.Viper {
 	vp.SetDefault("app.addr", "0.0.0.0")
 
 	vp.SetDefault("chrome.debug_port", "9222")
+	vp.SetDefault("chrome.debug_host", "127.0.0.1")
 
 	vp.SetDefault("db.host", "")
 	vp.SetDefault("db.port", 5432)
@@ -63,6 +64,7 @@ type Config struct {
 	} `mapstructure:"app"`
 
 	Chrome struct {
+		DebugHost string `mapstructure:"debug_host"`
 		DebugPort string `mapstructure:"debug_port"`
 	} `mapstructure:"chrome"`
 

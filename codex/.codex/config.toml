@@ -11,5 +11,28 @@
 command = "sh"
 args = [
   "-lc",
-  "HOST_IP=$(getent hosts host.docker.internal | awk '{print $1}' | head -n 1); exec npx -y chrome-devtools-mcp@latest --browser-url=http://${HOST_IP}:9222",
+  """
+HOST="${CHROME_DEBUG_HOST:-host.docker.internal}"
+PORT="${CHROME_DEBUG_PORT:-9222}"
+
+# If HOST is already an IPv4 address, keep it; otherwise resolve to an IP.
+if echo "$HOST" | grep -Eq '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$'; then
+  IP="$HOST"
+else
+  IP="$(getent hosts "$HOST" 2>/dev/null | awk 'NR==1{print $1}')"
+fi
+
+if [ -z "$IP" ]; then
+  echo "Failed to resolve CHROME_DEBUG_HOST ($HOST) to an IP address" >&2
+  exit 2
+fi
+
+exec npx -y chrome-devtools-mcp@latest --browser-url="http://$IP:$PORT"
+""",
 ]
+
+[projects."/app"]
+trust_level = "trusted"
+
+[notice]
+hide_rate_limit_model_nudge = true

@@ -14,7 +14,7 @@ The crawler writes **JSON files** to `out/` that must conform to `config/schema.
 
 ### 0) Prerequisites
 
-- Go 1.22+
+- Go 1.24+
 - Codex CLI installed on your host
 - Node.js available (for `npx chrome-devtools-mcp@latest`)
 - Google Chrome installed
@@ -26,6 +26,8 @@ make dev-chrome
 ```
 
 This launches Chrome with:
+- `--remote-debugging-address=$CHROME_DEBUG_BIND_ADDR` (default `127.0.0.1`; use `0.0.0.0` when the crawler runs in Docker)
+- `--remote-debugging-host=$CHROME_DEBUG_BIND_ADDR` (compat flag; same value)
 - `--remote-debugging-port=9222`
 - `--user-data-dir=...` (non-default; required for Chrome 136+)
 
@@ -40,6 +42,20 @@ codex mcp add chrome-devtools-mcp -- \
 ```
 
 This updates your host Codex config (typically `~/.codex/config.toml`).
+
+### 2b) One-time: connect Gemini to that Chrome
+
+Gemini CLI reads MCP servers from its settings file (this repo tracks `gemini/.gemini/settings.json`).
+
+To use the repo’s config on the host:
+
+```bash
+export GEMINI_CLI_SYSTEM_SETTINGS_PATH="$PWD/gemini/.gemini/settings.json"
+export CHROME_DEBUG_HOST=127.0.0.1
+export CHROME_DEBUG_PORT=9222
+```
+
+Then run `gemini` normally; it will launch `chrome-devtools-mcp` via the configured MCP server.
 
 ### 3) Verify the devtools connection
 
@@ -65,7 +81,6 @@ Results land in `out/`.
 
 - `CHROME_DEBUG_PORT` (default `9222`): DevTools port used by `cmd/devtool`
 - `CHROME_PROFILE_DIR` (default `$HOME/chrome-mcp-profiles/shopee`): dedicated Chrome profile directory for crawling
-- `CODEX_CMD` (default `codex`): Codex CLI command used by the runner
 - `CODEX_MODEL` (optional): pass `--model` to `codex exec` (use a faster model to reduce crawl latency)
 - `TARGET_URL` (Docker): URL used by `docker compose` / `make docker-once`
 
@@ -128,7 +143,9 @@ Do not expose port `9222` to your LAN/Internet; a DevTools session can fully con
 
 ## VPS HTTP Server (FX + chi)
 
-This repo also includes a long-lived HTTP server skeleton (Uber FX + chi) with a basic health endpoint.
+This repo also includes a long-lived HTTP server (Uber FX + chi) with:
+- `GET /health`
+- an optional Inngest endpoint at `POST/PUT/GET /api/inngest` (used to receive crawl jobs)
 
 Run:
 
@@ -147,3 +164,41 @@ Optional env vars (all have defaults; Postgres/Redis are disabled unless configu
 - `LOG_LEVEL` (default `info`)
 - Postgres (enabled only when `DB_HOST` + `DB_NAME` are set): `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`
 - Redis (enabled only when `REDIS_HOST` is set): `REDIS_USER`, `REDIS_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_SCHEME`
+
+## Docker: Long-Lived Server (Inngest Worker)
+
+This is the “just edit `.env` then `docker compose up`” path for running the Inngest worker server in a container.
+
+1) Start host Chrome first:
+
+```bash
+make dev-chrome
+```
+
+2) Create `.env`:
+
+```bash
+cp .env.example .env
+```
+
+3) Bring up the server:
+
+```bash
+docker compose up --build server
+```
+
+Verify:
+
+```bash
+curl -sS http://127.0.0.1:${APP_PORT:-3012}/health
+```
+
+Notes:
+- The `server` container always binds to `0.0.0.0` internally so the published port works (even if your `.env` uses `APP_ADDR=localhost` for host runs).
+- The container expects host Chrome DevTools at `http://${CHROME_DEBUG_HOST:-host.docker.internal}:${CHROME_DEBUG_PORT:-9222}`.
+- In Docker, the DevTools hostname is resolved to an IPv4 address before checking `/json/version` (helps avoid IPv6/hostname quirks).
+- In Docker, `/app/out` is symlinked to `/out` so relative `out/` writes land in the host-mounted `./out`.
+- For Docker, start Chrome with `CHROME_DEBUG_BIND_ADDR=0.0.0.0 make dev-chrome` so the container can reach the DevTools port.
+- If you're using `inngest-cli dev` on the host, set `INNGEST_DEV=http://host.docker.internal:8288` so the container can register/sync with the dev server.
+- Codex/Gemini auth is persisted via `./codex/.codex` and `./gemini/.gemini` volume mounts.
+- Containers use `HOME=/home/app` and symlink `~/.codex` → `/codex/.codex`, `~/.gemini` → `/gemini/.gemini` (see `entrypoint.sh`).

@@ -11,7 +11,7 @@ This checklist assumes the architecture in `docs/shopee_crawler_plan.md` (host C
   - `make dev-once URL=...` (one-shot crawl)
   - `make docker-once TARGET_URL=...` (parity check)
 - [x] Standardize env var names and document them:
-  - `CHROME_DEBUG_PORT`, `CHROME_PROFILE_DIR`, `CODEX_CMD`, `TARGET_URL`
+  - `CHROME_DEBUG_PORT`, `CHROME_PROFILE_DIR`, `TARGET_URL`
 
 ## B) Codex + MCP configuration
 
