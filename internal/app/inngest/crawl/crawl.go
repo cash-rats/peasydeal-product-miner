@@ -24,8 +24,9 @@ type CrawlRequestedEventData struct {
 }
 
 type CrawlFunction struct {
-	logger *zap.SugaredLogger
 	cfg    *config.Config
+	runner *runner.Runner
+	logger *zap.SugaredLogger
 }
 
 type RunResult struct {
@@ -36,14 +37,16 @@ type RunResult struct {
 type NewCrawlFunctionParams struct {
 	fx.In
 
-	Logger *zap.SugaredLogger
 	Cfg    *config.Config
+	Runner *runner.Runner
+	Logger *zap.SugaredLogger
 }
 
 func NewCrawlFunction(p NewCrawlFunctionParams) *CrawlFunction {
 	return &CrawlFunction{
 		logger: p.Logger,
 		cfg:    p.Cfg,
+		runner: p.Runner,
 	}
 }
 
@@ -89,7 +92,7 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 			"step", "resolve-out-dir",
 			"doing", "resolve output directory (default out)",
 		)
-		outDir := strings.TrimSpace(input.Event.Data.OutDir)
+		outDir := input.Event.Data.OutDir
 		if outDir == "" {
 			outDir = "out"
 		}
@@ -111,25 +114,10 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 			"doing", "run crawler (runner.RunOnce)",
 		)
 
-		tool := strings.TrimSpace(f.cfg.CrawlTool)
-		if tool == "" {
-			tool = "codex"
-		}
-		switch tool {
-		case "codex", "gemini":
-		default:
-			return RunResult{}, inngestgo.NoRetryError(fmt.Errorf("invalid crawl tool: %s", tool))
-		}
-
-		f.logger.Infow("⚒️ inngest_crawl_tool_selected",
-			"tool", tool,
-		)
-
-		outPath, result, err := runner.RunOnce(runner.Options{
-			URL:              url,
-			OutDir:           outDir,
-			Tool:             tool,
-			SkipGitRepoCheck: true,
+		outPath, result, err := f.runner.RunOnce(runner.Options{
+			URL:    url,
+			OutDir: outDir,
+			Tool:   strings.TrimSpace(f.cfg.CrawlTool),
 		})
 
 		if err != nil {

@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 /*
@@ -17,13 +19,15 @@ import (
 */
 
 type GeminiRunnerConfig struct {
-	Cmd   string
-	Model string
+	Cmd    string
+	Model  string
+	Logger *zap.SugaredLogger
 }
 
 type GeminiRunner struct {
-	cmd   string
-	model string
+	cmd    string
+	model  string
+	logger *zap.SugaredLogger
 
 	execCommand func(name string, args ...string) *exec.Cmd
 }
@@ -33,6 +37,7 @@ func NewGeminiRunner(cfg GeminiRunnerConfig) *GeminiRunner {
 		cmd:         cfg.Cmd,
 		model:       cfg.Model,
 		execCommand: exec.Command,
+		logger:      cfg.Logger,
 	}
 }
 
@@ -45,6 +50,7 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 	if strings.TrimSpace(r.model) != "" {
 		args = append(args, "--model", r.model)
 	}
+
 	// Allow the MCP server used by our DevTools-based prompts. Without this, Gemini CLI may deny
 	// MCP tool calls in non-interactive mode due to policy.
 	allowedMCP := strings.TrimSpace(os.Getenv("RUNNER_GEMINI_ALLOWED_MCP_SERVER_NAMES"))
@@ -73,11 +79,38 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 
 	log.Printf("⏱️ crawl finished tool=gemini url=%s duration=%s", url, time.Since(start).Round(time.Millisecond))
 
-	raw := strings.TrimSpace(stdout.String())
+	raw := stdout.String()
 	if unwrapped, ok := unwrapGeminiJSON(raw); ok {
+		r.logGeminiOutput(url, unwrapped)
 		return sanitizeGeminiResponse(unwrapped), nil
 	}
+	r.logGeminiOutput(url, raw)
 	return sanitizeGeminiResponse(raw), nil
+}
+
+func (r *GeminiRunner) logGeminiOutput(url string, out string) {
+	truncated := false
+	if out == "" {
+		r.logger.Debugw(
+			"🧠 llm output", "tool",
+			"gemini", "url",
+			url, "empty", true,
+		)
+		return
+	}
+
+	const maxChars = 8000
+	if len(out) > maxChars {
+		truncated = true
+		out = out[:maxChars] + "...(truncated)"
+	}
+
+	r.logger.Debugw(
+		"llm output", "tool",
+		"gemini", "url", url,
+		"truncated", truncated,
+		"output", out,
+	)
 }
 
 // unwrapGeminiJSON extracts the tool's "response" field when Gemini is invoked with `-o json`.

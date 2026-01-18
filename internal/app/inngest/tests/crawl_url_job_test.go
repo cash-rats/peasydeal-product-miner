@@ -62,7 +62,7 @@ func (s *CrawlURLJobTestSuite) TestSendCrawlerURLRequested() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
-		targetURL := "https://shopee.tw/%E3%80%9024H%E7%8F%BE%E8%B2%A8%E3%80%91EVA%E6%8B%96%E9%9E%8B-%E6%8B%96%E9%9E%8B-%E5%AE%A4%E5%85%A7%E6%8B%96%E9%9E%8B-%E8%B8%A9%E5%B1%8E%E6%84%9F%E6%8B%96%E9%9E%8B-%E5%B1%85%E5%AE%B6%E6%8B%96%E9%9E%8B-%E7%94%B7%E5%A5%B3%E6%8B%96%E9%9E%8B-%E6%8B%96%E9%9E%8B-%E9%98%B2%E6%BB%91%E6%8B%96%E9%9E%8B-%E5%AE%A4%E5%85%A7%E6%8B%96%E9%9E%8B-%E6%B5%B4%E5%AE%A4%E6%8B%96%E9%9E%8B-%E5%B1%85%E5%AE%B6%E6%8B%96%E9%9E%8B%E9%9E%8B-i.263324923.7155287343?is_from_login=true"
+		targetURL := "https://shopee.tw/XEXYMIX-%E9%BB%91%E6%A8%99-360N-%E5%85%A8%E6%96%B9%E4%BD%8D%E6%9F%94%E5%BD%88%E7%BE%8E%E6%84%9F-%E7%B7%8A%E8%BA%AB%E8%A4%B2-XP9157T-%E5%85%B124%E8%89%B2-%E8%B7%91%E6%AD%A5-%E5%81%A5%E8%BA%AB%E8%A4%B2-%E7%91%9C%E7%8F%88%E8%A4%B2-%E9%81%8B%E5%8B%95%E8%A4%B2-9157-i.180059250.5465364785"
 		eventID, err := crawl.EventIDForURL(targetURL)
 		s.Require().NoError(err)
 

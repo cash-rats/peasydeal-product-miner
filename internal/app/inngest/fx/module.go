@@ -8,6 +8,8 @@ import (
 	"peasydeal-product-miner/internal/app/inngest/crawl"
 	pkginngest "peasydeal-product-miner/internal/pkg/inngest"
 	"peasydeal-product-miner/internal/router"
+	"peasydeal-product-miner/internal/runner"
+	runnerFx "peasydeal-product-miner/internal/runner/fx"
 
 	"github.com/inngest/inngestgo"
 	"go.uber.org/fx"
@@ -15,7 +17,13 @@ import (
 )
 
 var Module = fx.Options(
+	runnerFx.AsRunner(runner.NewCodexRunner),
+	runnerFx.AsRunner(runner.NewGeminiRunner),
 	fx.Provide(
+		runnerFx.NewCodexRunnerConfig,
+		runnerFx.NewGeminiRunnerConfig,
+		runner.NewRunners,
+		runner.NewRunner,
 		pkginngest.NewInngestClient,
 		crawl.NewCrawlFunction,
 	),

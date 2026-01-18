@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 const defaultCodexModel = "gpt-5.2"
@@ -16,12 +18,14 @@ type CodexRunnerConfig struct {
 	Cmd              string
 	Model            string
 	SkipGitRepoCheck bool
+	Logger           *zap.SugaredLogger
 }
 
 type CodexRunner struct {
 	cmd              string
 	model            string
 	skipGitRepoCheck bool
+	logger           *zap.SugaredLogger
 
 	execCommand func(name string, args ...string) *exec.Cmd
 }
@@ -31,6 +35,7 @@ func NewCodexRunner(cfg CodexRunnerConfig) *CodexRunner {
 		cmd:              cfg.Cmd,
 		model:            cfg.Model,
 		skipGitRepoCheck: cfg.SkipGitRepoCheck,
+		logger:           cfg.Logger,
 		execCommand:      exec.Command,
 	}
 }

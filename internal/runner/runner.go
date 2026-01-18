@@ -11,12 +11,34 @@ import (
 
 	"peasydeal-product-miner/internal/crawler"
 	"peasydeal-product-miner/internal/source"
+
+	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 var allowedStatus = map[string]bool{
 	"ok":           true,
 	"needs_manual": true,
 	"error":        true,
+}
+
+type Runner struct {
+	logger  *zap.SugaredLogger
+	runners map[string]ToolRunner
+}
+
+type NewRunnerParams struct {
+	fx.In
+
+	Runners map[string]ToolRunner
+	Logger  *zap.SugaredLogger
+}
+
+func NewRunner(p NewRunnerParams) *Runner {
+	return &Runner{
+		runners: p.Runners,
+		logger:  p.Logger,
+	}
 }
 
 type Result map[string]any
@@ -44,6 +66,102 @@ type Options struct {
 	// SkipGitRepoCheck passes `--skip-git-repo-check` to Codex CLI.
 	// This is useful in containers or non-git directories.
 	SkipGitRepoCheck bool
+}
+
+func (r *Runner) RunOnce(opts Options) (string, Result, error) {
+	if strings.TrimSpace(opts.URL) == "" {
+		return "", nil, fmt.Errorf("missing URL")
+	}
+	if strings.TrimSpace(opts.OutDir) == "" {
+		return "", nil, fmt.Errorf("missing OutDir")
+	}
+
+	if err := os.MkdirAll(opts.OutDir, 0o755); err != nil {
+		return "", nil, err
+	}
+
+	src, err := source.Detect(opts.URL)
+	if err != nil {
+		res := errorResult(opts.URL, err)
+		outPath, werr := writeResult(opts.OutDir, res)
+		if werr != nil {
+			return "", res, werr
+		}
+		return outPath, res, err
+	}
+
+	if strings.TrimSpace(opts.PromptFile) == "" {
+		c, err := crawler.ForSource(src)
+		if err != nil {
+			res := errorResult(opts.URL, err)
+			outPath, werr := writeResult(opts.OutDir, res)
+			if werr != nil {
+				return "", res, werr
+			}
+			return outPath, res, err
+		}
+		opts.PromptFile = c.DefaultPromptFile()
+	}
+
+	prompt, err := loadPrompt(opts.PromptFile, opts.URL)
+	if err != nil {
+		res := errorResult(opts.URL, err)
+		outPath, werr := writeResult(opts.OutDir, res)
+		if werr != nil {
+			return "", res, werr
+		}
+		return outPath, res, err
+	}
+
+	tool := opts.Tool
+	if tool == "" {
+		tool = "codex"
+	}
+	tr, ok := r.runners[tool]
+	if !ok {
+		err := fmt.Errorf("❌ Unknown tool: %s", tool)
+		res := errorResult(opts.URL, err)
+		outPath, werr := writeResult(opts.OutDir, res)
+		if werr != nil {
+			return "", res, werr
+		}
+		return outPath, res, err
+	}
+
+	raw, err := tr.Run(opts.URL, prompt)
+	if err != nil {
+		res := errorResult(opts.URL, err)
+		outPath, werr := writeResult(opts.OutDir, res)
+		if werr != nil {
+			return "", res, werr
+		}
+		return outPath, res, err
+	}
+
+	res, err := parseResult(tr.Name(), raw)
+	if err != nil {
+		res = errorResult(opts.URL, err)
+		outPath, werr := writeResult(opts.OutDir, res)
+		if werr != nil {
+			return "", res, werr
+		}
+		return outPath, res, err
+	}
+
+	res.setdefault("url", opts.URL)
+	res.setdefault("source", string(src))
+	res.setdefault("captured_at", nowISO())
+	if verr := validateMinimal(res); verr != nil {
+		res = errorResult(opts.URL, verr)
+		outPath, werr := writeResult(opts.OutDir, res)
+		if werr != nil {
+			return "", res, werr
+		}
+		return outPath, res, verr
+	}
+
+	outPath, err := writeResult(opts.OutDir, res)
+	return outPath, res, err
 }
 
 func RunOnce(opts Options) (string, Result, error) {
