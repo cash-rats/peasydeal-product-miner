@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -84,11 +83,7 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 
 	// Allow the MCP server used by our DevTools-based prompts. Without this, Gemini CLI may deny
 	// MCP tool calls in non-interactive mode due to policy.
-	allowedMCP := os.Getenv("RUNNER_GEMINI_ALLOWED_MCP_SERVER_NAMES")
-	if allowedMCP == "" {
-		allowedMCP = "chrome-devtools"
-	}
-	args = append(args, "--allowed-mcp-server-names", allowedMCP)
+	args = append(args, "--allowed-mcp-server-names", "chrome-devtools")
 	args = append(args, prompt)
 
 	start := time.Now()
@@ -147,7 +142,6 @@ func (r *GeminiRunner) logGeminiOutput(url string, out string) {
 //
 // We want stdout to be the model text only (which should be the JSON contract).
 func unwrapGeminiJSON(raw string) (string, bool) {
-	raw = strings.TrimSpace(raw)
 	if raw == "" || !strings.HasPrefix(raw, "{") {
 		return "", false
 	}
