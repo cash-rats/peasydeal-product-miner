@@ -86,3 +86,5 @@ func (r *CodexRunner) Run(url string, prompt string) (string, error) {
 	log.Printf("⏱️ crawl finished tool=codex url=%s duration=%s", url, time.Since(start).Round(time.Millisecond))
 	return strings.TrimSpace(stdout.String()), nil
 }
+
+var _ ToolRunner = (*CodexRunner)(nil)

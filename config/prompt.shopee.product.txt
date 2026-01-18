@@ -58,6 +58,7 @@ Rules:
 - If status="ok": include title, description, currency, and price.
 - If status="needs_manual": include notes describing the wall.
 - If status="error": include error (string) with the failure reason.
+- Output must be EXACTLY ONE JSON object and NOTHING ELSE (no prose, no markdown fences like ```json).
 - Do NOT output placeholder type-descriptions like "string" as values; output real values with correct JSON types.
 - Normalize price:
   - Strip currency symbols, commas, spaces; keep only digits and an optional decimal point.

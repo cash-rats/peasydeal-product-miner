@@ -71,7 +71,19 @@ type Options struct {
 	SkipGitRepoCheck bool
 }
 
+func normalizeOptions(opts Options) Options {
+	opts.URL = strings.TrimSpace(opts.URL)
+	opts.PromptFile = strings.TrimSpace(opts.PromptFile)
+	opts.OutDir = strings.TrimSpace(opts.OutDir)
+	opts.Tool = strings.TrimSpace(opts.Tool)
+	if opts.Tool == "" {
+		opts.Tool = "codex"
+	}
+	return opts
+}
+
 func (r *Runner) RunOnce(opts Options) (string, Result, error) {
+	opts = normalizeOptions(opts)
 	if err := r.validator.Struct(opts); err != nil {
 		r.logger.Errorf("❌ Missing required field value %v", err)
 
@@ -115,13 +127,9 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 		return outPath, res, err
 	}
 
-	tool := opts.Tool
-	if tool == "" {
-		tool = "codex"
-	}
-	tr, ok := r.runners[tool]
+	tr, ok := r.runners[opts.Tool]
 	if !ok {
-		err := fmt.Errorf("❌ Unknown tool: %s", tool)
+		err := fmt.Errorf("❌ Unknown tool: %s", opts.Tool)
 		res := errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, res)
 		if werr != nil {
@@ -153,7 +161,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	res.setdefault("url", opts.URL)
 	res.setdefault("source", string(src))
 	res.setdefault("captured_at", nowISO())
-	if verr := validateMinimal(res); verr != nil {
+	if verr := validateContract(res); verr != nil {
 		res = errorResult(opts.URL, verr)
 		outPath, werr := writeResult(opts.OutDir, res)
 		if werr != nil {
@@ -171,6 +179,7 @@ func RunOnce(opts Options) (string, Result, error) {
 }
 
 func runOnce(opts Options, toolRunnerFromOptions func(Options) (ToolRunner, error)) (string, Result, error) {
+	opts = normalizeOptions(opts)
 	if strings.TrimSpace(opts.URL) == "" {
 		return "", nil, fmt.Errorf("missing URL")
 	}
@@ -250,7 +259,7 @@ func runOnce(opts Options, toolRunnerFromOptions func(Options) (ToolRunner, erro
 	r.setdefault("url", opts.URL)
 	r.setdefault("source", string(src))
 	r.setdefault("captured_at", nowISO())
-	if verr := validateMinimal(r); verr != nil {
+	if verr := validateContract(r); verr != nil {
 		r = errorResult(opts.URL, verr)
 		outPath, werr := writeResult(opts.OutDir, r)
 		if werr != nil {
@@ -276,13 +285,25 @@ func loadPrompt(promptPath string, url string) (string, error) {
 }
 
 func parseResult(toolName string, raw string) (Result, error) {
-	var parsed any
-	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+	extracted, err := extractFirstJSONObject(raw)
+	if err != nil {
 		if strings.TrimSpace(toolName) == "" {
 			toolName = "tool"
 		}
 		return nil, fmt.Errorf("invalid JSON from %s: %w", toolName, err)
 	}
+
+	dec := json.NewDecoder(strings.NewReader(extracted))
+	dec.UseNumber()
+
+	var parsed any
+	if err := dec.Decode(&parsed); err != nil {
+		if strings.TrimSpace(toolName) == "" {
+			toolName = "tool"
+		}
+		return nil, fmt.Errorf("invalid JSON from %s: %w", toolName, err)
+	}
+
 	obj, ok := parsed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("output JSON is not an object")
@@ -290,20 +311,24 @@ func parseResult(toolName string, raw string) (Result, error) {
 	return Result(obj), nil
 }
 
-func validateMinimal(r Result) error {
-	url, ok := r["url"].(string)
-	if !ok || strings.TrimSpace(url) == "" {
-		return fmt.Errorf("missing/invalid required key: url")
+func validateContract(r Result) error {
+	// Validate only the prompt-defined output contract; ignore other keys that the runner may add.
+	b, err := json.Marshal(r)
+	if err != nil {
+		return err
 	}
-	status, ok := r["status"].(string)
-	if !ok || !allowedStatus[status] {
+
+	dec := json.NewDecoder(strings.NewReader(string(b)))
+	dec.UseNumber()
+
+	var out CrawlOut
+	if err := dec.Decode(&out); err != nil {
+		return fmt.Errorf("invalid contract JSON: %w", err)
+	}
+	if !allowedStatus[out.Status] {
 		return fmt.Errorf("missing/invalid required key: status")
 	}
-	capturedAt, ok := r["captured_at"].(string)
-	if !ok || strings.TrimSpace(capturedAt) == "" {
-		return fmt.Errorf("missing/invalid required key: captured_at")
-	}
-	return nil
+	return validateCrawlOut(out)
 }
 
 func errorResult(url string, err error) Result {

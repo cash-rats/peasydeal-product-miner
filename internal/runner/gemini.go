@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -44,16 +43,48 @@ func NewGeminiRunner(cfg GeminiRunnerConfig) *GeminiRunner {
 func (r *GeminiRunner) Name() string { return "gemini" }
 
 func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
+	modelText, err := r.runModelText(url, prompt)
+	if err != nil {
+		return "", err
+	}
+
+	extracted, err := extractFirstJSONObject(modelText)
+	if err == nil {
+		r.logGeminiOutput(url, modelText)
+		return extracted, nil
+	}
+
+	r.logger.Infow("runner_gemini_repair_attempt", "url", url, "err", err.Error())
+	repairPrompt := buildGeminiRepairPrompt(url, modelText)
+
+	repairedText, rerr := r.runModelText(url, repairPrompt)
+	if rerr != nil {
+		r.logger.Infow("runner_gemini_repair_failed", "url", url, "err", rerr.Error())
+		return "", fmt.Errorf("gemini returned non-JSON output: %w", err)
+	}
+
+	repairedExtracted, perr := extractFirstJSONObject(repairedText)
+	if perr != nil {
+		r.logger.Infow("runner_gemini_repair_failed", "url", url, "err", perr.Error())
+		return "", fmt.Errorf("gemini returned non-JSON output: %w", err)
+	}
+
+	r.logger.Infow("runner_gemini_repair_succeeded", "url", url)
+	r.logGeminiOutput(url, repairedText)
+	return repairedExtracted, nil
+}
+
+func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 	// gemini [query..]
 	// We use -o json to ensure we get parsable output.
 	args := []string{"-o", "json"}
-	if strings.TrimSpace(r.model) != "" {
+	if r.model != "" {
 		args = append(args, "--model", r.model)
 	}
 
 	// Allow the MCP server used by our DevTools-based prompts. Without this, Gemini CLI may deny
 	// MCP tool calls in non-interactive mode due to policy.
-	allowedMCP := strings.TrimSpace(os.Getenv("RUNNER_GEMINI_ALLOWED_MCP_SERVER_NAMES"))
+	allowedMCP := os.Getenv("RUNNER_GEMINI_ALLOWED_MCP_SERVER_NAMES")
 	if allowedMCP == "" {
 		allowedMCP = "chrome-devtools"
 	}
@@ -61,41 +92,42 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 	args = append(args, prompt)
 
 	start := time.Now()
-	log.Printf("⏱️ crawl started tool=gemini url=%s", url)
+	r.logger.Infow("crawl_started", "tool", "gemini", "url", url)
 
 	cmd := r.execCommand(r.cmd, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			msg = err.Error()
-		}
-
-		log.Printf("⏱️ crawl failed tool=gemini url=%s duration=%s err=%s", url, time.Since(start).Round(time.Millisecond), msg)
-		return "", fmt.Errorf("gemini failed: %s", msg)
+		r.logger.Errorf(
+			"⏱️ crawl failed tool=gemini url=%s duration=%s err=%s",
+			url,
+			time.Since(start).Round(time.Millisecond),
+			err.Error(),
+		)
+		return "", fmt.Errorf("gemini failed: %s", err.Error())
 	}
 
-	log.Printf("⏱️ crawl finished tool=gemini url=%s duration=%s", url, time.Since(start).Round(time.Millisecond))
+	r.logger.Infow(
+		"crawl_finished",
+		"tool", "gemini",
+		"url", url,
+		"duration", time.Since(start).Round(time.Millisecond).String(),
+	)
 
 	raw := stdout.String()
 	if unwrapped, ok := unwrapGeminiJSON(raw); ok {
-		r.logGeminiOutput(url, unwrapped)
-		return sanitizeGeminiResponse(unwrapped), nil
+		return strings.TrimSpace(unwrapped), nil
 	}
 	r.logGeminiOutput(url, raw)
-	return sanitizeGeminiResponse(raw), nil
+	return strings.TrimSpace(raw), nil
 }
 
 func (r *GeminiRunner) logGeminiOutput(url string, out string) {
+	out = strings.TrimSpace(out)
 	truncated := false
 	if out == "" {
-		r.logger.Debugw(
-			"🧠 llm output", "tool",
-			"gemini", "url",
-			url, "empty", true,
-		)
+		r.logger.Debugw("llm_output", "tool", "gemini", "url", url, "empty", true)
 		return
 	}
 
@@ -105,12 +137,7 @@ func (r *GeminiRunner) logGeminiOutput(url string, out string) {
 		out = out[:maxChars] + "...(truncated)"
 	}
 
-	r.logger.Debugw(
-		"llm output", "tool",
-		"gemini", "url", url,
-		"truncated", truncated,
-		"output", out,
-	)
+	r.logger.Debugw("llm_output", "tool", "gemini", "url", url, "truncated", truncated, "output", out)
 }
 
 // unwrapGeminiJSON extracts the tool's "response" field when Gemini is invoked with `-o json`.
@@ -157,47 +184,39 @@ func unwrapGeminiJSON(raw string) (string, bool) {
 	}
 }
 
-func sanitizeGeminiResponse(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return s
+func buildGeminiRepairPrompt(url, previousOutput string) string {
+	if previousOutput == "" {
+		previousOutput = "<empty>"
 	}
 
-	// Common: Gemini may wrap JSON in markdown fences.
-	if strings.HasPrefix(s, "```") {
-		if fenced := extractFirstMarkdownFence(s); fenced != "" {
-			s = strings.TrimSpace(fenced)
-		}
-	}
+	return fmt.Sprintf(`
+You returned invalid JSON or did not follow the output contract.
 
-	// Fallback: if there's surrounding chatter, try to slice out the first JSON object.
-	if idx := strings.IndexByte(s, '{'); idx >= 0 {
-		if j := strings.LastIndexByte(s, '}'); j > idx {
-			s = strings.TrimSpace(s[idx : j+1])
-		}
-	}
-
-	return s
+Convert the TEXT below into EXACTLY ONE valid JSON object matching this contract:
+{
+  "url": "string",
+  "status": "ok | needs_manual | error",
+  "captured_at": "ISO-8601 UTC timestamp",
+  "notes": "string (required when status=needs_manual)",
+  "error": "string (required when status=error)",
+  "title": "string",
+  "description": "string",
+  "currency": "string (e.g. TWD)",
+  "price": "number or numeric string"
 }
 
-func extractFirstMarkdownFence(s string) string {
-	const fence = "```"
-	start := strings.Index(s, fence)
-	if start < 0 {
-		return ""
-	}
-	s = s[start+len(fence):]
+Rules:
+- Output JSON ONLY. No markdown fences. No extra text.
+- Do not call any tools.
+- url must be %q.
+- If required fields are missing, set status="error" and explain in error.
+- If the text indicates a login/verification/CAPTCHA wall, set status="needs_manual" and explain in notes.
 
-	// Optional language tag (e.g. "json") until first newline.
-	if nl := strings.IndexByte(s, '\n'); nl >= 0 {
-		s = s[nl+1:]
-	} else {
-		return ""
-	}
-
-	end := strings.Index(s, fence)
-	if end < 0 {
-		return ""
-	}
-	return s[:end]
+TEXT:
+<<<
+%s
+>>>
+`, url, previousOutput)
 }
+
+var _ ToolRunner = (*GeminiRunner)(nil)
