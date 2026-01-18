@@ -12,6 +12,7 @@ import (
 	"peasydeal-product-miner/internal/crawler"
 	"peasydeal-product-miner/internal/source"
 
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -23,8 +24,9 @@ var allowedStatus = map[string]bool{
 }
 
 type Runner struct {
-	logger  *zap.SugaredLogger
-	runners map[string]ToolRunner
+	logger    *zap.SugaredLogger
+	runners   map[string]ToolRunner
+	validator *validator.Validate
 }
 
 type NewRunnerParams struct {
@@ -36,17 +38,18 @@ type NewRunnerParams struct {
 
 func NewRunner(p NewRunnerParams) *Runner {
 	return &Runner{
-		runners: p.Runners,
-		logger:  p.Logger,
+		runners:   p.Runners,
+		logger:    p.Logger,
+		validator: validator.New(),
 	}
 }
 
 type Result map[string]any
 
 type Options struct {
-	URL        string
+	URL        string `validate:"required"`
 	PromptFile string
-	OutDir     string
+	OutDir     string `validate:"required"`
 	Tool       string // "codex" or "gemini"
 
 	// Cmd is the binary name/path to execute (e.g. "codex" or "gemini").
@@ -69,11 +72,10 @@ type Options struct {
 }
 
 func (r *Runner) RunOnce(opts Options) (string, Result, error) {
-	if strings.TrimSpace(opts.URL) == "" {
-		return "", nil, fmt.Errorf("missing URL")
-	}
-	if strings.TrimSpace(opts.OutDir) == "" {
-		return "", nil, fmt.Errorf("missing OutDir")
+	if err := r.validator.Struct(opts); err != nil {
+		r.logger.Errorf("❌ Missing required field value %v", err)
+
+		return "", nil, fmt.Errorf("missing OutDir %v", err)
 	}
 
 	if err := os.MkdirAll(opts.OutDir, 0o755); err != nil {
@@ -90,7 +92,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 		return outPath, res, err
 	}
 
-	if strings.TrimSpace(opts.PromptFile) == "" {
+	if opts.PromptFile == "" {
 		c, err := crawler.ForSource(src)
 		if err != nil {
 			res := errorResult(opts.URL, err)

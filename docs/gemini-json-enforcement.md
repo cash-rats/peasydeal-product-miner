@@ -165,6 +165,13 @@ func validateCrawlOut(out CrawlOut) error {
 
 Optional: validate that `price` is numeric. Accept `json.Number`, `float64`, `int`, or a string matching `^[0-9]+(\.[0-9]+)?$`.
 
+#### Repo note: prefer `validator/v10` for struct validation
+
+This repo can use `github.com/go-playground/validator/v10` to keep contract validation concise and maintainable:
+- Use `validate:"required,oneof=ok needs_manual error"` for `status`.
+- Use conditional tags like `required_if=Status ok` / `required_if=Status needs_manual` / `required_if=Status error`.
+- Add custom validators for `captured_at` (RFC3339/RFC3339Nano) and `price` (numeric string or JSON number).
+
 ### Step D: Add a single repair pass
 
 If extraction, unmarshal, or validation fails, do exactly **one** additional Gemini call to convert the bad output into valid JSON.
@@ -224,3 +231,87 @@ This enforces JSON at the model generation layer rather than post-processing.
 - [ ] Update `Run()` flow to: unwrap -> extract -> unmarshal -> validate -> marshal.
 - [ ] Add a one-time repair pass on failure.
 - [ ] Add tests and logs for repair attempts.
+
+## 7) Concrete implementation plan (this repo)
+
+This is a repo-specific plan to make Gemini/Codex runner outputs **always** end as a single valid JSON object that conforms to our crawl output contract.
+
+**Source of truth:** the output contract is defined by the prompt file(s), starting with `config/prompt.shopee.product.txt`. We do **not** want to maintain a separate JSON Schema file (e.g. `config/schema.product.json` is intended to be removed).
+
+### Phase 1: JSON extraction + canonicalization (no behavior change upstream)
+
+1) Keep Gemini CLI wrapper JSON:
+   - Keep `gemini -o json` in `internal/runner/gemini.go`.
+   - Keep `unwrapGeminiJSON()` as the only wrapper-unpacking step.
+
+2) Replace brittle slicing with decoder-based extraction:
+   - Add `extractFirstJSONObject(raw string) (string, error)` (decoder-based scan; `json.Decoder` + `UseNumber()`).
+   - Reuse the existing `extractFirstMarkdownFence()` for ```json fences before decoding.
+   - Delete or stop using the `sanitizeGeminiResponse()` `{...}` slicing fallback (it can be tricked by braces inside strings and fails with multiple objects).
+
+3) Canonicalize: always return canonical JSON:
+   - After extraction, unmarshal into `map[string]any` (or a typed struct if we introduce one) and then `json.Marshal` back to a single JSON object string.
+
+### Phase 2: Contract validation (match our schema rules)
+
+4) Validate required fields based on `status`:
+   - Implement `validateCrawlResult(r map[string]any) error` to enforce the contract described in `config/prompt.shopee.product.txt`:
+     - always required: `url`, `status`, `captured_at`
+     - if `status="needs_manual"`: require `notes`
+     - if `status="error"`: require `error`
+     - if `status="ok"`: require the required keys/types as specified in the prompt (keep these checks intentionally minimal at first: presence + basic type validation).
+
+5) Keep the contract in one place (recommended):
+   - Introduce a Go struct (e.g. `CrawlOut`) that mirrors the prompt’s output contract and return canonical JSON by marshaling that struct.
+   - Validate with `github.com/go-playground/validator/v10`:
+     - `status`: `required,oneof=ok needs_manual error`
+     - `notes`: `required_if=Status needs_manual`
+     - `error`: `required_if=Status error`
+     - `title/description/currency/price`: `required_if=Status ok`
+   - Implement small custom validators:
+     - `captured_at`: parse as RFC3339/RFC3339Nano (UTC preferred)
+     - `price`: accept JSON number or numeric string (often easiest via a dedicated `Price` type with `UnmarshalJSON`)
+   - Treat `config/prompt.shopee.product.txt` as the human-readable spec; keep the Go struct in sync with it (do not add/maintain a separate schema file).
+
+### Phase 3: One-time repair pass (Gemini only)
+
+5) Add a single repair pass in `internal/runner/gemini.go`:
+   - If unwrap/extract/unmarshal/validate fails, do **one** extra Gemini call with a repair prompt:
+     - “Convert TEXT into EXACTLY ONE valid JSON object matching the contract. Output JSON ONLY.”
+     - Include the prior bad output inside a delimiter block.
+     - Explicitly prohibit tool calls during repair (best-effort).
+   - Prevent infinite recursion via an `attempt` counter or `allowRepair` flag.
+   - After repair, rerun the same pipeline: unwrap -> extract -> unmarshal -> validate -> marshal.
+
+6) Keep Codex runner behavior consistent:
+   - Option A (minimal): leave `internal/runner/codex.go` as-is and enforce JSON in `internal/runner/runner.go` after `tr.Run(...)` for both tools.
+   - Option B (symmetric): add the same unwrap/extract/validate/marshal pipeline to the Codex runner (no wrapper unwrap needed).
+   - Prefer Option A if we want “one enforcement location” for all tools.
+
+### Phase 4: Prompt hardening (reduce repair frequency)
+
+7) Harden prompts that drive extraction:
+   - Update `config/prompt.shopee.product.txt` (and other prompt files used by crawlers) to append:
+     - “Return JSON ONLY (single object). No markdown fences. No extra text.”
+     - “If required data is missing, set status to needs_manual or error but still output valid JSON.”
+
+### Phase 5: Tests + observability
+
+8) Add unit tests for extraction and validation:
+   - Cases:
+     - JSON inside markdown fences
+     - extra text before/after JSON
+     - multiple JSON objects (extract first valid object)
+     - braces inside JSON strings
+     - missing required fields per status
+   - Place tests near the extractor/validator (e.g. `internal/runner/json_enforce_test.go`).
+
+9) Add debug logs:
+   - Log when repair is attempted and whether repair succeeded/failed.
+   - Avoid logging full outputs at info level; keep it debug and truncate.
+
+### Acceptance criteria
+
+- Runner returns a single JSON object string for Gemini runs even when the model adds chatter/fences.
+- Output passes our contract validation for `ok | needs_manual | error`.
+- At most one repair attempt is made per run.

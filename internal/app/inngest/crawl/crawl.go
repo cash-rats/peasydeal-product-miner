@@ -117,7 +117,7 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 		outPath, result, err := f.runner.RunOnce(runner.Options{
 			URL:    url,
 			OutDir: outDir,
-			Tool:   strings.TrimSpace(f.cfg.CrawlTool),
+			Tool:   f.cfg.CrawlTool,
 		})
 
 		if err != nil {
