@@ -40,7 +40,7 @@ currency (string, e.g., "CNY") if visible/obvious; otherwise omit.
 
 Image extraction rules:
 
-pics[] (ALL product images):
+images[] (ALL product images):
 
 Collect all reachable product-related image URLs, including:
 
@@ -62,7 +62,7 @@ Deduplicate URLs.
 
 Exclude obvious UI/decoration icons (logos, arrows, buttons).
 
-description & description_pics[] handling:
+description & description_images[] handling:
 
 If description is TEXT:
 
@@ -72,7 +72,7 @@ Do NOT include description images in description text
 
 If description is IMAGE-BASED or MIXED:
 
-Extract all description-area image URLs into description_pics[]
+Extract all description-area image URLs into description_images[]
 
 If there is no meaningful text, omit "description"
 
@@ -103,8 +103,8 @@ Output contract (JSON ONLY, no markdown, no extra keys):
 "title": "string",
 "price": "number or numeric string",
 "description": "string (optional)",
-"pics": ["string"],
-"description_pics": ["string"],
+"images": ["string"],
+"description_images": ["string"],
 "currency": "string (optional, e.g., CNY)"
 }
 
@@ -114,9 +114,9 @@ If status="ok":
 
 title and price are REQUIRED.
 
-pics[] MUST be included (empty array allowed if none found).
+images[] MUST be included (empty array allowed if none found).
 
-description and description_pics are optional.
+description and description_images are optional.
 
 If status="needs_manual":
 
