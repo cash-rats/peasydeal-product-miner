@@ -46,6 +46,11 @@ func NewViper() *viper.Viper {
 	vp.SetDefault("inngest.serve_host", "")
 	vp.SetDefault("inngest.serve_path", "")
 
+	vp.SetDefault("turso.sqlite_dsn", "")
+	vp.SetDefault("turso.sqlite_token", "")
+	vp.SetDefault("turso.sqlite_path", "")
+	vp.SetDefault("turso.sqlite_driver", "sqlite")
+
 	vp.SetDefault("crawl_tool", "codex")
 	vp.SetDefault("codex_model", "gpt-5.2")
 
@@ -93,6 +98,13 @@ type Config struct {
 		ServeHost  string `mapstructure:"serve_host"`
 		ServePath  string `mapstructure:"serve_path"`
 	} `mapstructure:"inngest"`
+
+	Turso struct {
+		DSN    string `mapstructure:"sqlite_dsn"`
+		Token  string `mapstructure:"sqlite_token"`
+		Path   string `mapstructure:"sqlite_path"`
+		Driver string `mapstructure:"sqlite_driver"`
+	} `mapstructure:"turso"`
 
 	CrawlTool  string `mapstructure:"crawl_tool"`
 	CodexModel string `mapstructure:"codex_model"`

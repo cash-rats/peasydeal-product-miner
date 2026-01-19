@@ -153,6 +153,12 @@ Run:
 make start
 ```
 
+Run with SQLite enabled (requires `go get modernc.org/sqlite` once):
+
+```bash
+TURSO_SQLITE_PATH=./out/dev.sqlite go run -tags=sqlite ./cmd/server
+```
+
 Verify:
 
 ```bash
@@ -164,6 +170,7 @@ Optional env vars (all have defaults; Postgres/Redis are disabled unless configu
 - `LOG_LEVEL` (default `info`)
 - Postgres (enabled only when `DB_HOST` + `DB_NAME` are set): `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`
 - Redis (enabled only when `REDIS_HOST` is set): `REDIS_USER`, `REDIS_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_SCHEME`
+- SQLite (enabled only when `TURSO_SQLITE_PATH` or `TURSO_SQLITE_DSN` is set; requires building/running with `-tags=sqlite`): `TURSO_SQLITE_PATH`, `TURSO_SQLITE_DSN`, `TURSO_SQLITE_TOKEN`, `TURSO_SQLITE_DRIVER` (default `sqlite`)
 
 ## Docker: Long-Lived Server (Inngest Worker)
 

@@ -8,5 +8,5 @@ import (
 )
 
 var Module = fx.Options(
-	router.AsRoute(health.NewHandler),
+	router.AsRoute(health.NewHealthHandler),
 )

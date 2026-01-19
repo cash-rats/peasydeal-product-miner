@@ -21,6 +21,7 @@ func main() {
 		}),
 		appfx.CoreAppOptions,
 		dbfx.Module,
+		dbfx.SQLiteModule,
 		cachefx.Module,
 		routerfx.CoreRouterOptions,
 		serverfx.ServerOptions,
