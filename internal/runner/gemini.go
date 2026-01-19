@@ -31,11 +31,15 @@ type GeminiRunner struct {
 }
 
 func NewGeminiRunner(cfg GeminiRunnerConfig) *GeminiRunner {
+	logger := cfg.Logger
+	if logger == nil {
+		logger = zap.NewNop().Sugar()
+	}
 	return &GeminiRunner{
 		cmd:         cfg.Cmd,
 		model:       cfg.Model,
 		execCommand: exec.Command,
-		logger:      cfg.Logger,
+		logger:      logger,
 	}
 }
 
@@ -53,22 +57,22 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 		return extracted, nil
 	}
 
-	r.logger.Infow("runner_gemini_repair_attempt", "url", url, "err", err.Error())
+	r.logger.Infow("runner_gemini_repair_attempt", "tool", "gemini", "url", url, "err", err.Error())
 	repairPrompt := buildGeminiRepairPrompt(url, modelText)
 
 	repairedText, rerr := r.runModelText(url, repairPrompt)
 	if rerr != nil {
-		r.logger.Infow("runner_gemini_repair_failed", "url", url, "err", rerr.Error())
+		r.logger.Infow("runner_gemini_repair_failed", "tool", "gemini", "url", url, "err", rerr.Error())
 		return "", fmt.Errorf("gemini returned non-JSON output: %w", err)
 	}
 
 	repairedExtracted, perr := extractFirstJSONObject(repairedText)
 	if perr != nil {
-		r.logger.Infow("runner_gemini_repair_failed", "url", url, "err", perr.Error())
+		r.logger.Infow("runner_gemini_repair_failed", "tool", "gemini", "url", url, "err", perr.Error())
 		return "", fmt.Errorf("gemini returned non-JSON output: %w", err)
 	}
 
-	r.logger.Infow("runner_gemini_repair_succeeded", "url", url)
+	r.logger.Infow("runner_gemini_repair_succeeded", "tool", "gemini", "url", url)
 	r.logGeminiOutput(url, repairedText)
 	return repairedExtracted, nil
 }

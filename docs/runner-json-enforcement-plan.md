@@ -28,7 +28,7 @@ Guarantee that **both** Gemini and Codex tool runs produce a **single valid JSON
 
 1) In `internal/runner/codex.go`:
    - Add `runModelText(url, prompt)` helper (same pattern as `GeminiRunner.runModelText`).
-   - After getting stdout, call `extractFirstJSONObject(modelText)`:
+   - After getting stdout (model text), call `extractFirstJSONObject(modelText)`:
      - On success: return the extracted canonical JSON object string.
      - On failure: do exactly **one** repair call to Codex using a repair prompt template (same pattern as Gemini).
    - Keep all Codex-specific concerns in this file (flags, model selection, skip-git-repo-check, etc.).
@@ -55,20 +55,75 @@ Guarantee that **both** Gemini and Codex tool runs produce a **single valid JSON
     - `modelText := runModelText(...)`
     - try `extractFirstJSONObject(modelText)`
     - if fail: run once with repair prompt and retry `extractFirstJSONObject`
-    - return extracted JSON string
+    - return extracted JSON string (canonical single object)
+
+#### Codex CLI invocation (must match current behavior)
+
+Reuse the current Codex runner calling convention:
+- Command: `codex exec ... "<prompt>"`
+- Flags:
+  - include `--skip-git-repo-check` when configured
+  - include `--model <model>` when non-empty (or fall back to `CODEX_MODEL` / default)
+
+#### Codex `Run` pseudocode (concrete)
+
+```go
+func (r *CodexRunner) Run(url, prompt string) (string, error) {
+  modelText, err := r.runModelText(url, prompt)
+  if err != nil { return "", err }
+
+  extracted, err := extractFirstJSONObject(modelText)
+  if err == nil {
+    r.logCodexOutput(url, modelText) // debug + truncation
+    return extracted, nil
+  }
+
+  r.logger.Infow("runner_codex_repair_attempt", "url", url, "err", err.Error())
+  repairPrompt := buildCodexRepairPrompt(url, modelText)
+
+  repairedText, rerr := r.runModelText(url, repairPrompt)
+  if rerr != nil {
+    r.logger.Infow("runner_codex_repair_failed", "url", url, "err", rerr.Error())
+    return "", fmt.Errorf("codex returned non-JSON output: %w", err)
+  }
+
+  repairedExtracted, perr := extractFirstJSONObject(repairedText)
+  if perr != nil {
+    r.logger.Infow("runner_codex_repair_failed", "url", url, "err", perr.Error())
+    return "", fmt.Errorf("codex returned non-JSON output: %w", err)
+  }
+
+  r.logger.Infow("runner_codex_repair_succeeded", "url", url)
+  r.logCodexOutput(url, repairedText)
+  return repairedExtracted, nil
+}
+```
+
+Notes:
+- The runner should return the **extracted JSON object string**, not raw stdout.
+- Keep repair to **one** attempt (no loops/recursion).
+- Use `extractFirstJSONObject()` from `internal/runner/json_extract.go`.
 
 ### Step 2: Keep `runner.go` generic
 
 - Ensure `internal/runner/runner.go` does not contain tool-specific repair logic.
 - Leave `parseResult()` + `validateContract()` in place for final validation.
+- After Codex/Gemini return canonical JSON strings, `parseResult()` becomes a final guard and should usually succeed.
 
 ### Step 3: Tests
 
-- Unit tests for:
-  - “repair path is invoked once” (mock runner implementing `RepairableToolRunner`).
-  - “no repair for non-repairable runner”.
-  - “repair success results in validated contract”.
-- Keep existing extraction/contract tests.
+- Add unit tests in `internal/runner/codex_test.go` (or extend existing tests) with an injected `execCommand` stub:
+  - Case 1: first call returns valid JSON -> no repair call
+  - Case 2: first call returns non-JSON, second returns JSON -> repair succeeds
+  - Case 3: both calls non-JSON -> returns error
+- Keep existing extraction tests (`internal/runner/json_extract_test.go`) and contract tests (`internal/runner/contract_test.go`).
+
+## Logging requirements (Codex)
+
+Match the Gemini logging style and use zap only:
+- `crawl_started` / `crawl_finished` / `crawl_failed` with fields: `tool=codex`, `url`, `duration` (string)
+- `runner_codex_repair_attempt` / `runner_codex_repair_succeeded` / `runner_codex_repair_failed`
+- `llm_output` at debug level with truncation (e.g. 8000 chars)
 
 ## Acceptance Criteria
 
