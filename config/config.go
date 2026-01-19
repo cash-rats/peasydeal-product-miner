@@ -47,6 +47,7 @@ func NewViper() *viper.Viper {
 	vp.SetDefault("inngest.serve_path", "")
 
 	vp.SetDefault("crawl_tool", "codex")
+	vp.SetDefault("codex_model", "gpt-5.2")
 
 	replacer := strings.NewReplacer(".", "_")
 	vp.SetEnvKeyReplacer(replacer)
@@ -93,7 +94,8 @@ type Config struct {
 		ServePath  string `mapstructure:"serve_path"`
 	} `mapstructure:"inngest"`
 
-	CrawlTool string `mapstructure:"crawl_tool"`
+	CrawlTool  string `mapstructure:"crawl_tool"`
+	CodexModel string `mapstructure:"codex_model"`
 }
 
 func NewConfig(vp *viper.Viper) (*Config, error) {

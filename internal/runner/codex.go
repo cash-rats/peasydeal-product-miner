@@ -9,8 +9,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const defaultCodexModel = "gpt-5.2"
-
 type CodexRunnerConfig struct {
 	Cmd              string
 	Model            string
@@ -104,7 +102,7 @@ func (r *CodexRunner) runModelText(url string, prompt string) (string, error) {
 		"crawl_started",
 		"tool", "codex",
 		"url", url,
-		"model", defaultCodexModel,
+		"model", r.model,
 	)
 
 	cmd := r.execCommand(r.cmd, args...)

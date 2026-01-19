@@ -1,6 +1,7 @@
 package fx
 
 import (
+	"peasydeal-product-miner/config"
 	runnerPkg "peasydeal-product-miner/internal/runner"
 
 	"go.uber.org/fx"
@@ -17,12 +18,20 @@ func AsRunner(f any) fx.Option {
 	)
 }
 
-func NewCodexRunnerConfig(logger *zap.SugaredLogger) runnerPkg.CodexRunnerConfig {
+// Provide config struct for `runnerPkg.CodexRunnerConfig`
+type NewCodexRunnerConfigParams struct {
+	fx.In
+
+	Logger *zap.SugaredLogger
+	Cfg    *config.Config
+}
+
+func NewCodexRunnerConfig(p NewCodexRunnerConfigParams) runnerPkg.CodexRunnerConfig {
 	return runnerPkg.CodexRunnerConfig{
 		Cmd:              "codex",
-		Model:            "gpt-5.2",
+		Model:            p.Cfg.CodexModel,
 		SkipGitRepoCheck: true,
-		Logger:           logger,
+		Logger:           p.Logger,
 	}
 }
 
