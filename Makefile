@@ -90,3 +90,14 @@ goose-create:
 	fi
 	@mkdir -p db/migrations
 	goose -dir db/migrations create "$(name)" sql
+
+
+.PHONY: goose
+goose:
+	@if [ -z "$(cmd)" ]; then \
+		echo "Error: Missing command name."; \
+		echo "Usage: make goose cmd=status"; \
+		exit 1; \
+	fi
+	@mkdir -p db/migrations
+	dotenvx run -f .env -- go run cmd/migrate/main.go $(cmd)
