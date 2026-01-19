@@ -2,7 +2,7 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
 # AI tool selection for dev-once (codex or gemini).
-TOOL ?= codex
+tool ?= codex
 
 # Load `.env` for developer convenience (Docker Compose already reads it).
 ifneq (,$(wildcard .env))
@@ -17,11 +17,12 @@ help:
 	"  make start                     Start long-lived HTTP server (/health)" \
 	"  make dev-chrome                 Start Chrome with DevTools enabled" \
 	"  make dev-doctor                 Check DevTools is reachable on localhost" \
-	"  make dev-once TOOL=codex|gemini <product_url>  Crawl one URL on the host (fast loop)" \
+	"  make dev-once tool=codex|gemini <product_url>  Crawl one URL on the host (fast loop)" \
 	"  make docker-doctor              Check Chrome + Codex auth for Docker runs" \
 	"  make docker-once <product_url>  Crawl one URL in Docker (parity check)" \
 	"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
-	"  make docker-login               Authorize host Codex for the Docker runner"
+	"  make docker-login               Authorize host Codex for the Docker runner" \
+	"  make goose-create name=<migration_name>  Create a goose SQL migration in db/migrations"
 
 .PHONY: start
 start:
@@ -47,7 +48,7 @@ dev-doctor:
 .PHONY: dev-once
 dev-once: dev-doctor
 	@URL="$(word 2,$(MAKECMDGOALS))"; \
-	go run ./cmd/devtool once --tool "$(TOOL)" --url "$$URL"
+	go run ./cmd/devtool once --tool "$(tool)" --url "$$URL"
 
 .PHONY: docker-once
 docker-once: docker-doctor
@@ -79,3 +80,13 @@ docker-gemini-login:
 	echo "Using Gemini: $$gemini_bin"; \
 	echo "Please check if your Gemini CLI requires authentication or is already authenticated."; \
 	HOME="$(CURDIR)/gemini" "$$gemini_bin"
+
+.PHONY: goose-create
+goose-create:
+	@if [ -z "$(name)" ]; then \
+		echo "Error: Missing migration name."; \
+		echo "Usage: make goose-create NAME=add_users_table"; \
+		exit 1; \
+	fi
+	@mkdir -p db/migrations
+	goose -dir db/migrations create "$(name)" sql
