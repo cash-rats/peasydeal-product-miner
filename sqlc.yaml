@@ -1,12 +1,12 @@
 version: "2"
 sql:
-  - schema: "db/migrations"  # 關鍵：直接指向存放 .sql migration 檔的資料夾
-    queries: "db/queries"    # 這裡放你平常寫的 CRUD SQL (query.sql)
+  - schema: "db/schema.sql"  # 關鍵：直接指向存放 .sql migration 檔的資料夾
+    queries: "db/query"      # 這裡放你平常寫的 CRUD SQL (query.sql)
     engine: "sqlite"         # Turso 兼容 SQLite，這裡填 sqlite
     gen:
       go:
-        package: "db"        # 生成的 Go package 名稱
-        out: "db"            # 生成的 .go 檔案輸出的路徑
+        package: "sqlcdb"    # 生成的 Go package 名稱
+        out: "db/sqlc"       # 生成的 .go 檔案輸出的路徑 (avoid clobbering existing db package)
 
         # 讓生成的 Struct 有 JSON tag (例如: `json:"created_at"`)
         # 這樣你可以直接把 Struct return 給前端 API，不用再轉一手

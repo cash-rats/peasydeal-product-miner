@@ -95,9 +95,16 @@ goose-create:
 .PHONY: goose
 goose:
 	@if [ -z "$(cmd)" ]; then \
-		echo "Error: Missing command name."; \
+		echo "Error: Missing goose command name."; \
 		echo "Usage: make goose cmd=status"; \
 		exit 1; \
 	fi
 	@mkdir -p db/migrations
 	dotenvx run -f .env -- go run cmd/migrate/main.go $(cmd)
+
+.PHONY: schema-dump
+schema-dump:
+	@mkdir -p db
+	@echo "Turso exporting Schema..."
+	turso db shell peasydeal ".schema" > db/schema.sql
+	@echo "complete！exported to db/schema.sql"
