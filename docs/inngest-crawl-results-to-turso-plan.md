@@ -52,6 +52,13 @@ Status mapping proposal:
 - runner `status=needs_manual` → `product_drafts.status=READY_FOR_REVIEW` (include `notes` in `draft_payload`)
 - runner `status=error` → `product_drafts.status=FAILED` and set `product_drafts.error` (also keep `error` in `draft_payload`)
 
+Persist failures too:
+
+- If crawling fails (tool error, parse error, validation error, etc.), we still persist a row to `product_drafts`:
+  - `draft_payload` is the runner’s error-shaped result JSON (it already includes `status=error` + `error` message).
+  - `status=FAILED`
+  - `error` column populated from the same error message.
+
 Idempotency / dedupe proposal:
 
 - Prefer using `input.Event.ID` (when present) as `product_drafts.id` for natural dedupe.
@@ -67,6 +74,10 @@ Create a small storage component that owns SQL writes and accepts an injected sq
   - `type ProductDraftStore struct { conn db.Conn; logger *zap.SugaredLogger }`
   - `func NewProductDraftStore(...) *ProductDraftStore`
   - `func (s *ProductDraftStore) UpsertFromCrawlResult(ctx context.Context, in UpsertFromCrawlResultInput) (draftID string, err error)`
+
+Assumption (per request):
+
+- Treat SQLite/Turso as always present (injected `db.Conn` `name:"sqlite"` without `optional:"true"`), so callers do not perform nil checks.
 
 Injection:
 
