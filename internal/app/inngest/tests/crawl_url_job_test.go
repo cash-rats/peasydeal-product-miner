@@ -62,7 +62,7 @@ func (s *CrawlURLJobTestSuite) TestSendCrawlerURLRequested() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
-		targetURL := "https://shopee.tw/SP-A66-%E5%A4%96%E6%8E%A5%E7%A1%AC%E7%A2%9F-1TB-2TB-4TB-5TB-2.5%E5%90%8B-%E8%BB%8D%E8%A6%8F%E9%98%B2%E9%9C%87-%E8%A1%8C%E5%8B%95%E7%A1%AC%E7%A2%9F-%E7%A7%BB%E5%8B%95%E5%BC%8F%E7%A1%AC%E7%A2%9F-HDD-%E9%98%B2%E6%B0%B4-%E5%BB%A3%E7%A9%8E-i.77690258.15602180381"
+		targetURL := "https://shopee.tw/%E3%80%90BRITA%E5%AE%98%E6%96%B9%E3%80%91%E5%8E%BB%E6%B0%B4%E5%9E%A2%E5%B0%88%E5%AE%B612%E5%85%A5%E7%89%B9%E6%83%A0%E7%B5%84%E3%80%8A%E8%B4%88%E6%B0%B4%E5%A3%BA%E3%80%8B-i.270022711.11755660099"
 		eventID, err := crawl.EventIDForURL(targetURL)
 		s.Require().NoError(err)
 
@@ -81,6 +81,10 @@ func (s *CrawlURLJobTestSuite) TestSendCrawlerURLRequested() {
 	})
 }
 
+/*
+cmd:
+dotenvx run -f .env -- go test -run TestCrawlURLJobTestSuite ./internal/app/inngest/tests/crawl_url_job_test.go -testify.m TestSendCrawlerURLRequested -v
+*/
 func TestCrawlURLJobTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(CrawlURLJobTestSuite))

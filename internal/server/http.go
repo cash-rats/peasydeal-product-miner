@@ -12,14 +12,14 @@ import (
 	"go.uber.org/fx"
 )
 
-type httpServerParams struct {
+type HttpServerParams struct {
 	fx.In
 
 	Config *config.Config
 	Router *chi.Mux
 }
 
-func NewHTTPServer(p httpServerParams) *http.Server {
+func NewHTTPServer(p HttpServerParams) *http.Server {
 	addr := strings.TrimSpace(p.Config.App.Addr)
 	port := strings.TrimSpace(p.Config.App.Port)
 	if addr == "" {
@@ -34,7 +34,7 @@ func NewHTTPServer(p httpServerParams) *http.Server {
 		Handler:           p.Router,
 		ReadTimeout:       15 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      15 * time.Second,
+		WriteTimeout:      10 * time.Minute,
 		IdleTimeout:       60 * time.Second,
 	}
 }

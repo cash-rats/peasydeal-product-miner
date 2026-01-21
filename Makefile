@@ -35,7 +35,7 @@ start/inngest:
 	npx inngest-cli@latest dev \
 		--no-discovery \
 		--poll-interval 10000 \
-		-u http://$(INNGEST_SERVE_HOST)/api/inngest
+		-u http://$(INNGEST_SERVE_HOST)$(INNGEST_SERVE_PATH)
 
 .PHONY: dev-chrome
 dev-chrome:

@@ -46,6 +46,13 @@ func NewRunner(p NewRunnerParams) *Runner {
 
 type Result map[string]any
 
+// setdefault mimics Python's dict.setdefault.
+func (r Result) setdefault(key string, value any) {
+	if _, ok := r[key]; !ok {
+		r[key] = value
+	}
+}
+
 type Options struct {
 	URL        string `validate:"required"`
 	PromptFile string
@@ -361,11 +368,4 @@ func resultSource(r Result) string {
 		return string(detected)
 	}
 	return "unknown"
-}
-
-// setdefault mimics Python's dict.setdefault.
-func (r Result) setdefault(key string, value any) {
-	if _, ok := r[key]; !ok {
-		r[key] = value
-	}
 }

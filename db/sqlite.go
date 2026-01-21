@@ -90,9 +90,9 @@ type NewSQLXSQLiteDBParams struct {
 func NewSQLXSQLiteDB(p NewSQLXSQLiteDBParams) (SQLiteSQLXOut, error) {
 	// Prefer DSN if you already set it; otherwise use DatabaseURL/Path field naming you have.
 	// For Turso remote, this should be: libsql://<db>.turso.io
-	dsn := strings.TrimSpace(p.Cfg.Turso.DSN)
+	dsn := p.Cfg.Turso.DSN
 	if dsn == "" {
-		dsn = strings.TrimSpace(p.Cfg.Turso.Path)
+		dsn = p.Cfg.Turso.Path
 	}
 
 	if dsn == "" {

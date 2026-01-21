@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"peasydeal-product-miner/config"
+	productdrafts "peasydeal-product-miner/internal/app/inngest/dao"
 	"peasydeal-product-miner/internal/pkg/chromedevtools"
 	"peasydeal-product-miner/internal/runner"
 
@@ -26,6 +27,7 @@ type CrawlRequestedEventData struct {
 type CrawlFunction struct {
 	cfg    *config.Config
 	runner *runner.Runner
+	store  *productdrafts.ProductDraftStore
 	logger *zap.SugaredLogger
 }
 
@@ -39,6 +41,7 @@ type NewCrawlFunctionParams struct {
 
 	Cfg    *config.Config
 	Runner *runner.Runner
+	Store  *productdrafts.ProductDraftStore
 	Logger *zap.SugaredLogger
 }
 
@@ -47,6 +50,7 @@ func NewCrawlFunction(p NewCrawlFunctionParams) *CrawlFunction {
 		logger: p.Logger,
 		cfg:    p.Cfg,
 		runner: p.Runner,
+		store:  p.Store,
 	}
 }
 
@@ -59,8 +63,10 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 	_, err := step.Run(ctx, "check-devtools", func(ctx context.Context) (any, error) {
 		f.logger.Infow("🏃🏻 inngest_step",
 			"step", "check-devtools",
-			"doing", "check Chrome DevTools is reachable",
+			"doing", "check Chrome DevTools is reachable (mocked)",
 		)
+
+		// DEBUG MODE: Skip real Chrome DevTools checks to isolate Inngest execution & logging.
 
 		checkURL, effectiveHost := chromedevtools.VersionURLResolved(ctx, f.cfg.Chrome.DebugHost, f.cfg.Chrome.DebugPort)
 		if strings.TrimSpace(f.cfg.Chrome.DebugHost) != "" && effectiveHost != strings.TrimSpace(f.cfg.Chrome.DebugHost) {
@@ -88,16 +94,18 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 	}
 
 	outDir, err := step.Run(ctx, "resolve-out-dir", func(ctx context.Context) (string, error) {
-		f.logger.Infow("🏃🏻 inngest_step",
+		f.logger.Infow("🏃🏻 resolve-out-dir",
 			"step", "resolve-out-dir",
 			"doing", "resolve output directory (default out)",
 		)
+
 		outDir := input.Event.Data.OutDir
 		if outDir == "" {
 			outDir = "out"
 		}
+
 		f.logger.Infow(
-			"✅ done inngest_step_finished",
+			"✅ done resolve-out-dir",
 			"step", "resolve-out-dir",
 			"doing", "resolve output directory (default out)",
 			"out", outDir,
@@ -109,9 +117,9 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 	}
 
 	r, err := step.Run(ctx, "run-crawler", func(ctx context.Context) (RunResult, error) {
-		f.logger.Infow("🏃🏻 inngest_step",
+		f.logger.Infow("🏃🏻 run-crawler",
 			"step", "run-crawler",
-			"doing", "run crawler (runner.RunOnce)",
+			"doing", "run crawler (runner.RunOnce) (mocked)",
 		)
 
 		outPath, result, err := f.runner.RunOnce(runner.Options{
@@ -126,18 +134,66 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 				"out_path", outPath,
 				"err", err,
 			)
-			return RunResult{}, inngestgo.NoRetryError(err)
+			// Do not fail the step; we still want to persist the failure result.
+			return RunResult{OutPath: outPath, Result: result}, nil
 		}
 
-		f.logger.Infoln("✅ inngest_step")
+		f.logger.Infoln("✅ run-crawler")
 
-		return RunResult{OutPath: outPath, Result: result}, err
+		return RunResult{OutPath: outPath, Result: result}, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, inngestgo.NoRetryError(err)
+	}
+
+	draftID, err := step.Run(ctx, "persist-product-draft", func(ctx context.Context) (string, error) {
+		status, _ := r.Result["status"].(string)
+		resultErr, _ := r.Result["error"].(string)
+
+		f.logger.Infow("persist-product-draft",
+			"step", "persist-product-draft",
+			"doing", "upsert crawl result into turso sqlite product_drafts (mocked)",
+			"result_status", status,
+			"result_keys", len(r.Result),
+			"result_error", resultErr,
+			"out_path", r.OutPath,
+		)
+
+		eventID := ""
+		if input.Event.ID != nil {
+			eventID = strings.TrimSpace(*input.Event.ID)
+		}
+
+		id, err := f.store.UpsertFromCrawlResult(ctx, productdrafts.UpsertFromCrawlResultInput{
+			EventID: eventID,
+			URL:     url,
+			Result:  r.Result,
+		})
+		if err != nil {
+			f.logger.Errorw(
+				"❌ inngest_step_failed",
+				"step", "persist-product-draft",
+				"doing", "upsert crawl result into turso sqlite product_drafts",
+				"err", err,
+			)
+			return "", inngestgo.NoRetryError(err)
+		}
+
+		f.logger.Infow(
+			"✅ done persist-product-draft",
+			"step", "persist-product-draft",
+			"doing", "upsert crawl result into turso sqlite product_drafts (mocked)",
+			"draft_id", id,
+		)
+
+		return id, nil
+	})
+	if err != nil {
+		return nil, inngestgo.NoRetryError(err)
 	}
 
 	resp := map[string]any{
+		"draft_id": draftID,
 		"out_path": r.OutPath,
 		"result":   r.Result,
 	}
