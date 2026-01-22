@@ -3,7 +3,6 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -187,105 +186,6 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 
 	outPath, err := writeResult(opts.OutDir, res)
 	return outPath, res, err
-}
-
-func RunOnce(opts Options) (string, Result, error) {
-	return runOnce(opts, NewToolRunnerFromOptions)
-}
-
-func runOnce(opts Options, toolRunnerFromOptions func(Options) (ToolRunner, error)) (string, Result, error) {
-	opts = normalizeOptions(opts)
-	if strings.TrimSpace(opts.URL) == "" {
-		return "", nil, fmt.Errorf("missing URL")
-	}
-	if strings.TrimSpace(opts.OutDir) == "" {
-		return "", nil, fmt.Errorf("missing OutDir")
-	}
-
-	if err := os.MkdirAll(opts.OutDir, 0o755); err != nil {
-		return "", nil, err
-	}
-
-	src, err := source.Detect(opts.URL)
-	if err != nil {
-		r := errorResult(opts.URL, err)
-		outPath, werr := writeResult(opts.OutDir, r)
-		if werr != nil {
-			return "", r, werr
-		}
-		return outPath, r, err
-	}
-
-	if strings.TrimSpace(opts.PromptFile) == "" {
-		c, err := crawler.ForSource(src)
-		if err != nil {
-			r := errorResult(opts.URL, err)
-			outPath, werr := writeResult(opts.OutDir, r)
-			if werr != nil {
-				return "", r, werr
-			}
-			return outPath, r, err
-		}
-		opts.PromptFile = c.DefaultPromptFile()
-	}
-
-	prompt, err := loadPrompt(opts.PromptFile, opts.URL)
-	if err != nil {
-		r := errorResult(opts.URL, err)
-		outPath, werr := writeResult(opts.OutDir, r)
-		if werr != nil {
-			return "", r, werr
-		}
-		return outPath, r, err
-	}
-
-	tr, err := toolRunnerFromOptions(opts)
-	if err != nil {
-		r := errorResult(opts.URL, err)
-		outPath, werr := writeResult(opts.OutDir, r)
-		if werr != nil {
-			return "", r, werr
-		}
-		return outPath, r, err
-	}
-
-	log.Printf("📄 prompt selected url=%s source=%s prompt_file=%s tool=%s", opts.URL, src, opts.PromptFile, tr.Name())
-
-	raw, err := tr.Run(opts.URL, prompt)
-	if err != nil {
-		r := errorResult(opts.URL, err)
-		outPath, werr := writeResult(opts.OutDir, r)
-		if werr != nil {
-			return "", r, werr
-		}
-		return outPath, r, err
-	}
-
-	r, err := parseResult(tr.Name(), raw)
-	if err != nil {
-		r = errorResult(opts.URL, err)
-		outPath, werr := writeResult(opts.OutDir, r)
-		if werr != nil {
-			return "", r, werr
-		}
-		return outPath, r, err
-	}
-
-	r.setdefault("url", opts.URL)
-	r.setdefault("source", string(src))
-	r.setdefault("captured_at", nowISO())
-	r.ensureImagesArray()
-	if verr := validateContract(r); verr != nil {
-		r = errorResult(opts.URL, verr)
-		outPath, werr := writeResult(opts.OutDir, r)
-		if werr != nil {
-			return "", r, werr
-		}
-		return outPath, r, verr
-	}
-
-	outPath, err := writeResult(opts.OutDir, r)
-	return outPath, r, err
 }
 
 func nowISO() string {
