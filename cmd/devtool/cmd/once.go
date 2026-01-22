@@ -38,6 +38,7 @@ func newOnceCmd() *cobra.Command {
 
 				fx.Provide(
 					func(cfg *config.Config, logger *zap.SugaredLogger) runnerPkg.CodexRunnerConfig {
+						logger.Infof("🏃🏻 running on model: %v", cfg.CodexModel)
 						return runnerPkg.CodexRunnerConfig{
 							Cmd:              "codex",
 							Model:            cfg.CodexModel,
@@ -46,6 +47,7 @@ func newOnceCmd() *cobra.Command {
 						}
 					},
 					func(cfg *config.Config, logger *zap.SugaredLogger) runnerPkg.GeminiRunnerConfig {
+						logger.Infof("🏃🏻 running on model: %v", cfg.GeminiModel)
 						return runnerPkg.GeminiRunnerConfig{
 							Cmd:    "gemini",
 							Model:  cfg.GeminiModel,

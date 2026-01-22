@@ -77,7 +77,6 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 	// gemini [query..]
 	// We use -o json to ensure we get parsable output.
-	log.Printf("~~1 runModelText model %v", r.model)
 	args := []string{"-o", "json"}
 	if r.model != "" {
 		args = append(args, "--model", r.model)
