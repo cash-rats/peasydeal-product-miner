@@ -21,7 +21,7 @@ help:
 	"  make dev-doctor                 Check DevTools is reachable on localhost" \
 	"  make dev-once tool=codex|gemini url=<product_url>  Crawl one URL on the host (fast loop)" \
 	"  make docker-doctor              Check Chrome + Codex auth for Docker runs" \
-	"  make docker-once url=<product_url>  Crawl one URL in Docker (parity check)" \
+	"  make docker-once tool=codex|gemini url=<product_url>  Crawl one URL in Docker (parity check)" \
 	"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
 	"  make docker-login               Authorize host Codex for the Docker runner" \
 	"  make goose-create name=<migration_name>  Create a goose SQL migration in db/migrations"
@@ -57,7 +57,7 @@ dev-once: dev-doctor
 docker-once: docker-doctor
 	@URL="$(strip $(url))"; \
 	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make docker-once url=https://shopee.tw/..."; exit 2; fi; \
-	docker compose run --rm --build -e TARGET_URL="$$URL" runner
+	docker compose run --rm --build -e TARGET_URL="$$URL" -e CRAWL_TOOL="$(tool)" runner
 
 .PHONY: docker-doctor
 docker-doctor:
