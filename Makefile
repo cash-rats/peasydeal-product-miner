@@ -20,10 +20,10 @@ help:
 	"  make dev-chrome                 Start Chrome with DevTools enabled" \
 	"  make dev-doctor                 Check DevTools is reachable on localhost" \
 	"  make dev-once tool=codex|gemini url=<product_url>  Crawl one URL on the host (fast loop)" \
-	"  make docker-doctor              Check Chrome + Codex auth for Docker runs" \
+	"  make docker-doctor tool=codex|gemini  Check Chrome + tool auth for Docker runs" \
 	"  make docker-once tool=codex|gemini url=<product_url>  Crawl one URL in Docker (parity check)" \
 	"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
-	"  make docker-login               Authorize host Codex for the Docker runner" \
+	"  make docker-login tool=codex|gemini  Authorize host tool for the Docker runner" \
 	"  make goose-create name=<migration_name>  Create a goose SQL migration in db/migrations"
 
 .PHONY: start
@@ -57,11 +57,23 @@ dev-once: dev-doctor
 docker-once: docker-doctor
 	@URL="$(strip $(url))"; \
 	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make docker-once url=https://shopee.tw/..."; exit 2; fi; \
-	docker compose run --rm --build -e TARGET_URL="$$URL" -e CRAWL_TOOL="$(tool)" runner
+	docker compose run --rm --build runner /app/devtool once --tool "$(tool)" --url "$$URL" --out-dir /out
 
 .PHONY: docker-doctor
 docker-doctor:
-	go run ./cmd/devtool docker-doctor
+	go run ./cmd/devtool docker-doctor --tool "$(tool)"
+
+.PHONY: docker-shell
+docker-shell:
+	docker compose run --rm --build runner sh
+
+.PHONY: docker-login
+docker-login:
+	@if [[ "$(tool)" == "gemini" ]]; then \
+		$(MAKE) docker-gemini-login; \
+	else \
+		$(MAKE) docker-codex-login; \
+	fi
 
 .PHONY: docker-codex-login
 docker-codex-login:
@@ -69,7 +81,7 @@ docker-codex-login:
 	mkdir -p ./codex
 	@codex_cmd="$${CODEX_CMD:-codex}"; \
 	codex_bin="$$(command -v "$$codex_cmd" || true)"; \
-	if [[ -z "$$codex_bin" ]]; then echo "codex not found in PATH (or CODEX_CMD). Try: CODEX_CMD=/full/path/to/codex make docker-login"; exit 127; fi; \
+	if [[ -z "$$codex_bin" ]]; then echo "codex not found in PATH (or CODEX_CMD). Try: CODEX_CMD=/full/path/to/codex make docker-codex-login"; exit 127; fi; \
 	echo "Using Codex: $$codex_bin"; \
 	HOME="$(CURDIR)/codex" "$$codex_bin" login
 

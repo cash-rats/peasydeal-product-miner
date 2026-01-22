@@ -82,7 +82,7 @@ Results land in `out/`.
 - `CHROME_DEBUG_PORT` (default `9222`): DevTools port used by `cmd/devtool`
 - `CHROME_PROFILE_DIR` (default `$HOME/chrome-mcp-profiles/shopee`): dedicated Chrome profile directory for crawling
 - `CODEX_MODEL` (optional): pass `--model` to `codex exec` (use a faster model to reduce crawl latency)
-- `TARGET_URL` (Docker): URL used by `docker compose` / `make docker-once`
+- `TARGET_URL` (Docker, optional): URL used by `docker compose run runner` when you don't pass `--url` explicitly
 
 ## Docker (Deployment Parity Check)
 
@@ -98,7 +98,7 @@ make dev-chrome
 
 ```bash
 cp .env.example .env
-make docker-once https://shopee.tw/...
+make docker-once url=https://shopee.tw/...
 ```
 
 Notes:
@@ -108,7 +108,7 @@ Notes:
 ### Codex auth in Docker (if needed)
 
 ```bash
-make docker-login
+make docker-login tool=codex
 ```
 
 This runs Codex login on the host while storing auth/config under `./codex/.codex/` (which is mounted into the container).

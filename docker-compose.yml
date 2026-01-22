@@ -41,6 +41,10 @@ services:
       - HOME=/home/app
       - CODEX_SKIP_GIT_REPO_CHECK=${CODEX_SKIP_GIT_REPO_CHECK:-1}
       - CRAWL_TOOL=${CRAWL_TOOL:-codex}
+      - CHROME_DEBUG_HOST=${CHROME_DEBUG_HOST:-host.docker.internal}
+      - CHROME_DEBUG_PORT=${CHROME_DEBUG_PORT:-9222}
+      - CODEX_MODEL=${CODEX_MODEL:-gpt-5.2}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
     stdin_open: true
     tty: true
     volumes:
@@ -51,7 +55,7 @@ services:
     # Template: run a single URL (set TARGET_URL in `.env`).
     command: >
       sh -lc
-      '/app/runner
+      '/app/devtool once
       --url "$$TARGET_URL"
       --tool "$$CRAWL_TOOL"
       --out-dir /out'

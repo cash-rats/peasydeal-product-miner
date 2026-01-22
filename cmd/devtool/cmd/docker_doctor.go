@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -17,12 +18,13 @@ import (
 func newDockerDoctorCmd() *cobra.Command {
 	var (
 		port     string
+		tool     string
 		authFile string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "docker-doctor",
-		Short: "Check Chrome + Codex auth for Docker runs",
+		Short: "Check Chrome + tool auth for Docker runs",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := chromedevtools.VersionURL(chromedevtools.DefaultHost, port)
 			_, err := chromedevtools.CheckReachable(context.Background(), url, 3*time.Second)
@@ -30,6 +32,22 @@ func newDockerDoctorCmd() *cobra.Command {
 				return fmt.Errorf("host Chrome DevTools not reachable at %s (start it via `make dev-chrome` and login/solve CAPTCHA if needed): %w", url, err)
 			}
 			fmt.Printf("✅ Chrome ready: DevTools reachable at %s\n", url)
+
+			toolName := strings.TrimSpace(tool)
+			if toolName == "" {
+				toolName = "codex"
+			}
+
+			switch toolName {
+			case "gemini":
+				fmt.Println("ℹ️  Gemini selected: skipping Codex auth check.")
+				fmt.Println("OK: Host Chrome DevTools reachable.")
+				return nil
+			case "codex":
+				// Continue below.
+			default:
+				return fmt.Errorf("unknown tool: %s (expected codex or gemini)", toolName)
+			}
 
 			info, err := os.Stat(authFile)
 			if err != nil {
@@ -57,6 +75,7 @@ func newDockerDoctorCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&port, "port", envutil.String(os.Getenv, "CHROME_DEBUG_PORT", "9222"), "Chrome DevTools remote debugging port on the host")
+	cmd.Flags().StringVar(&tool, "tool", envutil.String(os.Getenv, "CRAWL_TOOL", "codex"), "Tool to use (codex or gemini)")
 	cmd.Flags().StringVar(&authFile, "auth-file", filepath.Join("codex", ".codex", "auth.json"), "Path to Codex auth.json persisted for Docker runs")
 	return cmd
 }

@@ -15,6 +15,7 @@ COPY cache/ /src/cache/
 
 RUN go build -o /out/runner ./cmd/runner
 RUN go build -o /out/server ./cmd/server
+RUN go build -o /out/devtool ./cmd/devtool
 
 FROM node:20-bookworm-slim
 
@@ -25,6 +26,7 @@ COPY entrypoint.sh /app/entrypoint.sh
 
 COPY --from=build /out/runner /app/runner
 COPY --from=build /out/server /app/server
+COPY --from=build /out/devtool /app/devtool
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl \
@@ -39,6 +41,7 @@ RUN npm install -g "${CODEX_NPM_PKG}" "${GEMINI_NPM_PKG}"
 
 RUN chmod +x /app/runner
 RUN chmod +x /app/server
+RUN chmod +x /app/devtool
 RUN chmod +x /app/entrypoint.sh
 
 # Expected runtime mounts:
