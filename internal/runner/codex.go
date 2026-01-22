@@ -103,6 +103,8 @@ func (r *CodexRunner) runModelText(url string, prompt string) (string, error) {
 		args = append(args, "--model", r.model)
 	}
 
+	r.logger.Infof("🏃🏻 running on model: %v", r.model)
+
 	args = append(args, prompt)
 	start := time.Now()
 	r.logger.Infow(

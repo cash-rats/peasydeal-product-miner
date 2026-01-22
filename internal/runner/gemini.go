@@ -82,6 +82,8 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 		args = append(args, "--model", r.model)
 	}
 
+	r.logger.Infof("🏃🏻 running on model: %v", r.model)
+
 	// Allow the MCP server used by our DevTools-based prompts. Without this, Gemini CLI may deny
 	// MCP tool calls in non-interactive mode due to policy.
 	args = append(args, "--allowed-mcp-server-names", "chrome-devtools")
