@@ -63,8 +63,16 @@ type Options struct {
 	// If empty, CodexCmd is used for backward compatibility.
 	Cmd string
 
+	// Model passes `--model` to tools that support it (Codex CLI and Gemini CLI).
+	// If empty, CodexModel is used for backward compatibility.
+	Model string
+
 	// CodexCmd is a deprecated alias for Cmd.
 	CodexCmd string
+
+	// CodexModel is a deprecated alias for Model.
+	// It historically passed `--model` to Codex CLI when non-empty.
+	CodexModel string
 
 	// SkipGitRepoCheck passes `--skip-git-repo-check` to Codex CLI.
 	// This is useful in containers or non-git directories.

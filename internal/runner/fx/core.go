@@ -35,10 +35,21 @@ func NewCodexRunnerConfig(p NewCodexRunnerConfigParams) runnerPkg.CodexRunnerCon
 	}
 }
 
-func NewGeminiRunnerConfig(logger *zap.SugaredLogger) runnerPkg.GeminiRunnerConfig {
+type NewGeminiRunnerConfigParams struct {
+	fx.In
+
+	Logger *zap.SugaredLogger
+	Cfg    *config.Config
+}
+
+func NewGeminiRunnerConfig(p NewGeminiRunnerConfigParams) runnerPkg.GeminiRunnerConfig {
+	model := ""
+	if p.Cfg != nil {
+		model = p.Cfg.GeminiModel
+	}
 	return runnerPkg.GeminiRunnerConfig{
 		Cmd:    "gemini",
-		Model:  "",
-		Logger: logger,
+		Model:  model,
+		Logger: p.Logger,
 	}
 }

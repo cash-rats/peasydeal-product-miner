@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
@@ -26,28 +27,31 @@ func newOnceCmd() *cobra.Command {
 		Use:   "once",
 		Short: "Crawl one URL on the host (fast loop)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if url == "" {
+			if strings.TrimSpace(url) == "" {
 				return errors.New("missing required flag: --url")
 			}
 
 			app := fx.New(
-				fx.Supply(
-					runnerPkg.CodexRunnerConfig{
-						Cmd:              "codex",
-						Model:            "gpt-5.2",
-						SkipGitRepoCheck: true,
-					},
-					runnerPkg.GeminiRunnerConfig{
-						Cmd:   "gemini",
-						Model: "",
-					},
-				),
-
 				appfx.CoreAppOptions,
 				runnerFx.AsRunner(runnerPkg.NewCodexRunner),
 				runnerFx.AsRunner(runnerPkg.NewGeminiRunner),
 
 				fx.Provide(
+					func(cfg *config.Config, logger *zap.SugaredLogger) runnerPkg.CodexRunnerConfig {
+						return runnerPkg.CodexRunnerConfig{
+							Cmd:              "codex",
+							Model:            cfg.CodexModel,
+							SkipGitRepoCheck: true,
+							Logger:           logger,
+						}
+					},
+					func(cfg *config.Config, logger *zap.SugaredLogger) runnerPkg.GeminiRunnerConfig {
+						return runnerPkg.GeminiRunnerConfig{
+							Cmd:    "gemini",
+							Model:  cfg.GeminiModel,
+							Logger: logger,
+						}
+					},
 					runnerPkg.NewRunners,
 					runnerPkg.NewRunner,
 				),
@@ -55,7 +59,6 @@ func newOnceCmd() *cobra.Command {
 				fx.Invoke(func(
 					r *runnerPkg.Runner,
 					logger *zap.SugaredLogger,
-					cfg *config.Config,
 				) {
 					outPath, _, err := r.RunOnce(
 						runnerPkg.Options{
@@ -94,7 +97,7 @@ func newOnceCmd() *cobra.Command {
 	cmd.Flags().StringVar(&url, "url", "", "Shopee product URL")
 	cmd.Flags().StringVar(&promptFile, "prompt-file", "", "Prompt template file path (optional; auto-selected by URL when empty)")
 	cmd.Flags().StringVar(&outDir, "out-dir", "out", "Output directory for result JSON")
-	cmd.Flags().StringVar(&model, "model", "", "Model override for the selected tool (optional; defaults to CODEX_MODEL or GEMINI_MODEL)")
+	cmd.Flags().StringVar(&model, "model", "", "Model override for the selected tool (optional; defaults to CODEX_MODEL/GEMINI_MODEL config)")
 	cmd.Flags().StringVar(&tool, "tool", "codex", "Tool to use (codex or gemini)")
 	return cmd
 }
