@@ -26,11 +26,15 @@ type CodexRunner struct {
 }
 
 func NewCodexRunner(cfg CodexRunnerConfig) *CodexRunner {
+	logger := cfg.Logger
+	if logger == nil {
+		logger = zap.NewNop().Sugar()
+	}
 	return &CodexRunner{
 		cmd:              cfg.Cmd,
 		model:            cfg.Model,
 		skipGitRepoCheck: cfg.SkipGitRepoCheck,
-		logger:           cfg.Logger,
+		logger:           logger,
 		execCommand:      exec.Command,
 	}
 }
@@ -90,10 +94,13 @@ func (r *CodexRunner) Run(url string, prompt string) (string, error) {
 
 func (r *CodexRunner) runModelText(url string, prompt string) (string, error) {
 	// Codex CLI expects exec-scoped flags after the subcommand:
-	//   codex exec --skip-git-repo-check "<prompt>"
+	//   codex exec --skip-git-repo-check --model <model> "<prompt>"
 	args := []string{"exec"}
 	if r.skipGitRepoCheck {
 		args = append(args, "--skip-git-repo-check")
+	}
+	if r.model != "" {
+		args = append(args, "--model", r.model)
 	}
 
 	args = append(args, prompt)

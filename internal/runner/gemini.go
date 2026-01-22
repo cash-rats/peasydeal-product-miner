@@ -31,15 +31,11 @@ type GeminiRunner struct {
 }
 
 func NewGeminiRunner(cfg GeminiRunnerConfig) *GeminiRunner {
-	logger := cfg.Logger
-	if logger == nil {
-		logger = zap.NewNop().Sugar()
-	}
 	return &GeminiRunner{
 		cmd:         cfg.Cmd,
 		model:       cfg.Model,
 		execCommand: exec.Command,
-		logger:      logger,
+		logger:      cfg.Logger,
 	}
 }
 

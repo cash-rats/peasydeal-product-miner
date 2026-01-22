@@ -53,6 +53,7 @@ func NewViper() *viper.Viper {
 
 	vp.SetDefault("crawl_tool", "codex")
 	vp.SetDefault("codex_model", "gpt-5.2")
+	vp.SetDefault("gemini_model", "gemini-3-flash ")
 
 	replacer := strings.NewReplacer(".", "_")
 	vp.SetEnvKeyReplacer(replacer)
@@ -106,8 +107,9 @@ type Config struct {
 		Driver string `mapstructure:"sqlite_driver"`
 	} `mapstructure:"turso"`
 
-	CrawlTool  string `mapstructure:"crawl_tool"`
-	CodexModel string `mapstructure:"codex_model"`
+	CrawlTool   string `mapstructure:"crawl_tool"`
+	CodexModel  string `mapstructure:"codex_model"`
+	GeminiModel string `mapstructure:"gemini_model"`
 }
 
 func NewConfig(vp *viper.Viper) (*Config, error) {

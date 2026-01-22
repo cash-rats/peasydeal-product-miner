@@ -66,7 +66,7 @@ make dev-doctor
 ### 4) Crawl one product URL
 
 ```bash
-make dev-once https://shopee.tw/...
+make dev-once url=https://shopee.tw/...
 ```
 
 Results land in `out/`.
@@ -126,7 +126,7 @@ If you see `Not inside a trusted directory...`, keep `CODEX_SKIP_GIT_REPO_CHECK=
 Shopee sometimes shows a login/verify/CAPTCHA wall that is not reliably automatable.
 
 - Fix it by manually completing the verification in the **same Chrome profile** you started with `make dev-chrome`.
-- Re-run `make dev-once ...` (or let the scheduled runner try again later).
+- Re-run `make dev-once url=...` (or let the scheduled runner try again later).
 
 ## Troubleshooting
 

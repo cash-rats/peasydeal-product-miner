@@ -46,7 +46,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(
 		newChromeCmd(),
 		newDoctorCmd(),
-		// newDockerDoctorCmd(),
+		newDockerDoctorCmd(),
 		newOnceCmd(),
 	)
 	return rootCmd

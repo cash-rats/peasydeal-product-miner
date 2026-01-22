@@ -3,6 +3,8 @@ SHELL := /usr/bin/env bash
 
 # AI tool selection for dev-once (codex or gemini).
 tool ?= codex
+# URL to crawl for dev-once (required).
+url ?=
 
 # Load `.env` for developer convenience (Docker Compose already reads it).
 ifneq (,$(wildcard .env))
@@ -17,7 +19,7 @@ help:
 	"  make start                     Start long-lived HTTP server (/health)" \
 	"  make dev-chrome                 Start Chrome with DevTools enabled" \
 	"  make dev-doctor                 Check DevTools is reachable on localhost" \
-	"  make dev-once tool=codex|gemini <product_url>  Crawl one URL on the host (fast loop)" \
+	"  make dev-once tool=codex|gemini url=<product_url>  Crawl one URL on the host (fast loop)" \
 	"  make docker-doctor              Check Chrome + Codex auth for Docker runs" \
 	"  make docker-once <product_url>  Crawl one URL in Docker (parity check)" \
 	"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
@@ -47,7 +49,8 @@ dev-doctor:
 
 .PHONY: dev-once
 dev-once: dev-doctor
-	@URL="$(word 2,$(MAKECMDGOALS))"; \
+	@URL="$(strip $(url))"; \
+	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make dev-once url=https://shopee.tw/..."; exit 2; fi; \
 	go run ./cmd/devtool once --tool "$(tool)" --url "$$URL"
 
 .PHONY: docker-once
