@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os/exec"
 	"strings"
 	"time"
@@ -76,6 +77,7 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 	// gemini [query..]
 	// We use -o json to ensure we get parsable output.
+	log.Printf("~~1 runModelText model %v", r.model)
 	args := []string{"-o", "json"}
 	if r.model != "" {
 		args = append(args, "--model", r.model)
@@ -94,11 +96,12 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
+		log.Printf("err ! %v %v", err.Error(), cmd.Stderr)
 		r.logger.Errorf(
 			"⏱️ crawl failed tool=gemini url=%s duration=%s err=%s",
 			url,
 			time.Since(start).Round(time.Millisecond),
-			err.Error(),
+			fmt.Sprintf("std err %v, command err %v", cmd.Stderr, err.Error()),
 		)
 		return "", fmt.Errorf("gemini failed: %s", err.Error())
 	}
@@ -112,10 +115,10 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 
 	raw := stdout.String()
 	if unwrapped, ok := unwrapGeminiJSON(raw); ok {
-		return strings.TrimSpace(unwrapped), nil
+		return unwrapped, nil
 	}
 	r.logGeminiOutput(url, raw)
-	return strings.TrimSpace(raw), nil
+	return raw, nil
 }
 
 func (r *GeminiRunner) logGeminiOutput(url string, out string) {

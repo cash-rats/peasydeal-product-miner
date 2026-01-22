@@ -53,6 +53,12 @@ func (r Result) setdefault(key string, value any) {
 	}
 }
 
+func (r Result) ensureImagesArray() {
+	if v, ok := r["images"]; !ok || v == nil {
+		r["images"] = []any{}
+	}
+}
+
 type Options struct {
 	URL        string `validate:"required"`
 	PromptFile string
@@ -169,6 +175,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	res.setdefault("url", opts.URL)
 	res.setdefault("source", string(src))
 	res.setdefault("captured_at", nowISO())
+	res.ensureImagesArray()
 	if verr := validateContract(res); verr != nil {
 		res = errorResult(opts.URL, verr)
 		outPath, werr := writeResult(opts.OutDir, res)
@@ -267,6 +274,7 @@ func runOnce(opts Options, toolRunnerFromOptions func(Options) (ToolRunner, erro
 	r.setdefault("url", opts.URL)
 	r.setdefault("source", string(src))
 	r.setdefault("captured_at", nowISO())
+	r.ensureImagesArray()
 	if verr := validateContract(r); verr != nil {
 		r = errorResult(opts.URL, verr)
 		outPath, werr := writeResult(opts.OutDir, r)

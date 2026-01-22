@@ -51,11 +51,12 @@ Output contract (JSON ONLY, no markdown):
   "title": "string",
   "description": "string",
   "currency": "string (e.g. TWD)",
-  "price": "number or numeric string"
+  "price": "number or numeric string",
+  "images": ["string"] (optional; empty array allowed)
 }
 
 Rules:
-- If status="ok": include title, description, currency, and price.
+- If status="ok": include title, description, currency, and price. images is optional (empty array allowed).
 - If status="needs_manual": include notes describing the wall.
 - If status="error": include error (string) with the failure reason.
 - Output must be EXACTLY ONE JSON object and NOTHING ELSE (no prose, no markdown fences like ```json).
@@ -67,3 +68,22 @@ Rules:
    - Prefer JSON-LD `offers.priceCurrency` (if present).
    - Fallback to `meta[property="product:price:currency"]` (or `meta[property="og:price:currency"]`).
    - If you still cannot find a currency but the site is Shopee TW, use `"TWD"` as a last resort.
+
+Image extraction (overlay thumbnails):
+- Do NOT call `fetch`, `XMLHttpRequest`, or any Shopee APIs; do NOT execute site-native functions/SDKs; only read already-present DOM/HTML.
+- Fast path (preferred): use the OVERLAY as the source of truth. Do not try to “scroll the thumbnail strip” on the main page.
+- Open the product image viewer overlay by clicking the main product image (DevTools `click` on the main image area).
+  - Expected behavior: a modal appears with `role="dialog"` and page scrolling becomes disabled (`body` overflow becomes `hidden`).
+- In ONE `evaluate_script`, extract ALL product images from the overlay dialog DOM (including off-screen/hidden thumbnails):
+  - Locate the modal root: `const dialog = document.querySelector('[role=\"dialog\"]')` (fallback: `[aria-modal=\"true\"]` / `.shopee-modal`).
+  - Collect candidate thumbnail images from within the dialog: `dialog.querySelectorAll('img')`.
+  - Read `src` safely: `img.currentSrc || img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy')`.
+  - Keep only Shopee CDN images: `src` contains `susercontent.com/file/`.
+  - Keep only thumbnail-sized images (overlay thumbs are typically ~80x80): bounding box width/height between ~50 and ~120.
+  - Deduplicate by base URL: strip `@resize_...` suffix from `src` (treat those as the same image).
+  - Filter out non-product duplicates/noise:
+    - Prefer the DOMINANT gallery “series” among thumbnails (majority vote on the `/file/<prefix>` portion), and drop outliers.
+    - If multiple series share the same numeric block (e.g. `sg-11134201` + `tw-11134201`), keep them together.
+- Fallback validation (only if needed): if thumbnails look polluted (e.g. a thumbnail that doesn’t change the large image),
+  click each thumb INSIDE THE OVERLAY (normal `.click()`) and collect the large displayed image URL after each click; keep the set of unique large images.
+  - Avoid calling any network APIs; rely only on what the overlay already renders.

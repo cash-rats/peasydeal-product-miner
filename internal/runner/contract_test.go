@@ -57,6 +57,22 @@ func TestValidateCrawlOut_PriceAllowsNumericString(t *testing.T) {
 	}
 }
 
+func TestValidateCrawlOut_ImagesOptional(t *testing.T) {
+	out := CrawlOut{
+		URL:         "https://example.com",
+		Status:      "ok",
+		CapturedAt:  "2026-01-18T00:00:00Z",
+		Title:       "t",
+		Description: "d",
+		Currency:    "TWD",
+		Price:       json.Number("123.45"),
+		// Images intentionally omitted.
+	}
+	if err := validateCrawlOut(out); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+}
+
 func TestValidateCrawlOut_PriceRejectsNonNumericString(t *testing.T) {
 	out := CrawlOut{
 		URL:         "https://example.com",

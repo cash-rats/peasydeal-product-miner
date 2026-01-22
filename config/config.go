@@ -53,7 +53,7 @@ func NewViper() *viper.Viper {
 
 	vp.SetDefault("crawl_tool", "codex")
 	vp.SetDefault("codex_model", "gpt-5.2")
-	vp.SetDefault("gemini_model", "gemini-3-flash ")
+	vp.SetDefault("gemini_model", "gemini-3-flash")
 
 	replacer := strings.NewReplacer(".", "_")
 	vp.SetEnvKeyReplacer(replacer)

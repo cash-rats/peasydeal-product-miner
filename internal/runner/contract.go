@@ -25,6 +25,7 @@ type CrawlOut struct {
 	Description string `json:"description,omitempty" validate:"required_if=Status ok"`
 	Currency    string `json:"currency,omitempty" validate:"required_if=Status ok"`
 	Price       any    `json:"price,omitempty" validate:"required_if=Status ok,price"`
+	Images      []any  `json:"images,omitempty"`
 }
 
 func validateCrawlOut(out CrawlOut) error {
