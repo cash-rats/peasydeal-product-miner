@@ -14,15 +14,14 @@ This repo’s crawler architecture and constraints remain the source of truth in
 
 ## Current State (What We Have)
 
-There are two binaries under `cmd/`:
+There is one primary binary under `cmd/`:
 
 - `cmd/devtool`:
   - Manual command dispatch via `os.Args[1]` switch.
   - Per-command parsing via `flag.NewFlagSet`.
   - Commands: `chrome`, `doctor`, `docker-doctor`, `once`.
-- `cmd/runner`:
-  - Single command using global `flag` parsing.
-  - Calls `internal/runner.RunOnce` and prints output path.
+  
+`cmd/runner` was removed in favor of using `cmd/devtool once` everywhere (including Docker).
 
 Observed pain points:
 
@@ -43,14 +42,12 @@ This is the lowest-risk refactor. It preserves the current Makefile/Dockerfile m
   - `devtool doctor`
   - `devtool docker-doctor`
   - `devtool once`
-- `cmd/runner` becomes a Cobra root command `runner` (even if it stays single-purpose today).
-
 Pros:
-- Minimal impact on deployment wiring (`docker-compose.yml` continues to run `/app/runner ...`).
+- Minimal impact on deployment wiring (`docker-compose.yml` continues to run `/app/devtool once ...`).
 - Easy incremental migration (convert devtool first, then runner).
 
 Cons:
-- Still two entrypoints (acceptable, but slightly less cohesive).
+- Still multiple entrypoints if runner exists (but runner has been removed).
 
 ### Option B (Later): Merge into a single binary with subcommands
 
@@ -105,17 +102,6 @@ Cons:
     - Call `internal/runner.RunOnce`, print output path.
     - Preserve current semantics: if output file is written, treat crawl errors as non-fatal for CLI exit.
 
-### `runner`
-
-- `runner` root
-  - Flags (current):
-    - `--url` (required today)
-    - `--prompt-file`, `--out-dir`, `--codex-cmd`
-  - Future-ready flags (non-breaking, optional to add later):
-    - `--urls-file`
-    - `--timeout`
-    - `--debug-dir` (persist raw stdout/stderr)
-
 ## Code Organization (Cobra Layout)
 
 Introduce a conventional Cobra structure:
@@ -123,10 +109,6 @@ Introduce a conventional Cobra structure:
 - `cmd/devtool/main.go`:
   - Minimal: calls `cmd.Execute()` and handles error exit code.
 - `cmd/devtool/cmd/root.go`, `cmd/devtool/cmd/chrome.go`, etc.
-- `cmd/runner/main.go`:
-  - Minimal: calls `cmd.Execute()`.
-- `cmd/runner/cmd/root.go`
-
 Shared logic and helpers:
 
 - Keep crawl behavior in `internal/runner` (already good separation).
@@ -143,13 +125,11 @@ Shared logic and helpers:
 2. Refactor `cmd/devtool`:
    - Replace `os.Args` switch + `usage()` with Cobra root + subcommands.
    - Preserve command names and flags to avoid breaking Make targets.
-3. Refactor `cmd/runner`:
-   - Convert to Cobra root; keep flag names identical (`-url`, `-prompt-file`, `-out-dir`, `-codex-cmd`) to avoid breaking Docker command lines.
-4. Deduplicate helpers:
+3. Deduplicate helpers:
    - Remove duplicate env parsing functions from `main.go` files.
-5. Update docs/help output:
+4. Update docs/help output:
    - Ensure `--help` prints correct examples and env vars.
-6. Validate behavior:
+5. Validate behavior:
    - `go test ./...` (add tests only where patterns already exist).
    - Manual quick checks:
      - `go run ./cmd/devtool --help`
@@ -173,4 +153,3 @@ Shared logic and helpers:
 
 - Adding Cobra requires updating `go.mod`, which requires **network access** to fetch modules.
 - CLI compatibility: to avoid breaking Make/Docker, preserve existing flag names and command names during the first migration (Option A).
-

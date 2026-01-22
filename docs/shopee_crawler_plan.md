@@ -205,8 +205,6 @@ Keep a versioned prompt file like `/app/config/prompt.txt` that instructs the ag
 README.md
 docker-compose.yml
 Dockerfile
-cmd/runner/
-  main.go
 internal/runner/
   runner.go
 config/

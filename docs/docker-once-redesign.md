@@ -2,7 +2,7 @@
 
 ## Goal
 
-Provide a Docker-based, one-shot crawl command that is **behaviorally identical** to the host `dev-once` loop, while keeping the existing “runner-in-Docker, Chrome-on-host” model.
+Provide a Docker-based, one-shot crawl command that is **behaviorally identical** to the host `dev-once` loop, while keeping the existing “devtool-in-Docker, Chrome-on-host” model.
 
 Target UX:
 
@@ -13,13 +13,11 @@ make docker-once tool=gemini url=https://shopee.tw/...
 
 Outputs still land in `./out/` on the host.
 
-## Current Problems (Why `docker-once` Is “Messed Up”)
+## Current Problems (Why `docker-once` Was “Messed Up”)
 
 1) **CLI flag mismatch (hard failure)**
 
-- `docker-compose.yml` currently runs the container command with `--tool "$CRAWL_TOOL"`.
-- The binary executed in the container is `/app/runner` (built from `cmd/runner`).
-- `cmd/runner` does **not** define a `--tool` flag today, so Docker runs fail immediately.
+- The container command expected flags that the executed binary did not support, causing Docker runs to fail immediately.
 
 2) **Parity gaps (soft failures / confusing behavior)**
 
@@ -46,9 +44,9 @@ Implementation detail:
 - `make docker-once` runs the crawl inside Docker via `docker compose run --rm --build runner ...`.
 - The out dir inside Docker should be `/out` (bind-mounted to host `./out`), so results persist.
 
-### Container command (runner)
+### Container command (service name: `runner`)
 
-The Docker run should explicitly pass flags to `/app/runner`:
+The Docker run should explicitly pass flags to `/app/devtool once`:
 
 - `--url <url>` (required)
 - `--tool codex|gemini` (new; parity with `dev-once`)
@@ -58,7 +56,7 @@ The Docker run should explicitly pass flags to `/app/runner`:
 
 ## Required Code Changes (Updated Approach)
 
-Instead of running `/app/runner` in Docker, run the same “devtool once” command that the host uses, as a compiled binary inside the image.
+Run the same “devtool once” command that the host uses, as a compiled binary inside the image.
 
 ### 1) Add `devtool` binary to the Docker image
 
@@ -100,7 +98,7 @@ Replace the current `docker compose run ... -e TARGET_URL=... -e CRAWL_TOOL=... 
 
 ```bash
 go test ./...
-go run ./cmd/runner --help
+go run ./cmd/devtool --help
 ```
 
 2) Manual parity check:
@@ -120,4 +118,4 @@ Confirm:
 ## Expected Outcome
 
 - `docker-once` becomes a predictable “parity check” command: same knobs as `dev-once`, same output location, just executed inside Docker.
-- The compose runner command becomes correct (no nonexistent flags) and easier to debug because `/app/runner` is invoked explicitly with flags.
+- The compose runner command becomes correct and easier to debug because `/app/devtool once` is invoked explicitly with flags.

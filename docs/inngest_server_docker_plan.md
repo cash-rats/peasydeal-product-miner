@@ -13,8 +13,8 @@ Run the long-lived HTTP server (`cmd/server/main.go`) inside Docker so it can:
 - `cmd/server/main.go` already boots an FX app and includes the `inngest` domain module.
 - `internal/app/inngest/fx/module.go` registers the `crawl-url` Inngest function and wires an HTTP handler at `/api/inngest`.
 - `internal/app/inngest/crawl/crawl.go` calls `runner.RunOnce(...)` and supports `CRAWL_TOOL=codex|gemini`.
-- Docker today is “runner-in-Docker” only:
-  - `Dockerfile` builds `cmd/runner` and installs Codex/Gemini CLIs.
+- Docker today is “devtool-in-Docker” only:
+  - `Dockerfile` builds `cmd/devtool` and installs Codex/Gemini CLIs.
   - `docker-compose.yml` runs the one-shot `runner` service (exits after a single URL).
 
 ## What’s Missing (Gaps to Close)
@@ -44,7 +44,7 @@ Run the long-lived HTTP server (`cmd/server/main.go`) inside Docker so it can:
 ### Step 1 — Add a `server` image target
 
 - Update `Dockerfile` (or add a second Dockerfile) to build **both**:
-  - `/app/runner` from `./cmd/runner`
+  - `/app/devtool` from `./cmd/devtool`
   - `/app/server` from `./cmd/server`
 - Keep Node + `codex`/`gemini` installed in the final image so the server can execute crawl jobs.
 - Ensure the final container has:
@@ -93,4 +93,3 @@ Run the long-lived HTTP server (`cmd/server/main.go`) inside Docker so it can:
   - job runs
   - output JSON appears under `out/`
   - logs show tool selection (`codex`/`gemini`)
-

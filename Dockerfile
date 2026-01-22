@@ -1,4 +1,4 @@
-# Template image for running the Go runner.
+# Template image for running the Go devtool.
 # NOTE: You still need to install/configure `codex`/`gemini` and ensure MCP is configured at runtime.
 
 FROM golang:1.25-bookworm AS build
@@ -13,7 +13,6 @@ COPY config/ /src/config/
 COPY db/ /src/db/
 COPY cache/ /src/cache/
 
-RUN go build -o /out/runner ./cmd/runner
 RUN go build -o /out/server ./cmd/server
 RUN go build -o /out/devtool ./cmd/devtool
 
@@ -24,7 +23,6 @@ WORKDIR /app
 COPY config/ /app/config/
 COPY entrypoint.sh /app/entrypoint.sh
 
-COPY --from=build /out/runner /app/runner
 COPY --from=build /out/server /app/server
 COPY --from=build /out/devtool /app/devtool
 
@@ -39,7 +37,6 @@ ARG CODEX_NPM_PKG=@openai/codex
 ARG GEMINI_NPM_PKG=@google/gemini-cli
 RUN npm install -g "${CODEX_NPM_PKG}" "${GEMINI_NPM_PKG}"
 
-RUN chmod +x /app/runner
 RUN chmod +x /app/server
 RUN chmod +x /app/devtool
 RUN chmod +x /app/entrypoint.sh
@@ -49,4 +46,4 @@ RUN chmod +x /app/entrypoint.sh
 # - /codex for Codex credential store (bind-mounted)
 # - /gemini for Gemini credential store + settings (bind-mounted)
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["/app/runner", "--help"]
+CMD ["/app/devtool", "--help"]

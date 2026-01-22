@@ -86,7 +86,7 @@ Results land in `out/`.
 
 ## Docker (Deployment Parity Check)
 
-This repo supports a “runner-in-Docker, Chrome-on-host” deployment model.
+This repo supports a “devtool-in-Docker, Chrome-on-host” deployment model.
 
 1) Start host Chrome first:
 

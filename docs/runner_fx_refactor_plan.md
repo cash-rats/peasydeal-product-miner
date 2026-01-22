@@ -17,7 +17,7 @@ Refactor `internal/runner` to be FX-friendly by:
   - Writes output file under `OutDir`
 - `internal/runner/codex.go` and `internal/runner/gemini.go` implement `Name()` and `Run(url, prompt)`.
 - Call sites exist in:
-  - CLI commands (e.g. `cmd/runner`, `cmd/devtool`)
+  - CLI commands (e.g. `cmd/devtool`)
   - Server-side domain code (e.g. `internal/app/inngest/crawl/crawl.go`)
 
 ## Design (Proposed)
@@ -130,7 +130,6 @@ Keep existing behavior by leaving `runner.RunOnce(opts)` callable.
 ## Validation Checklist
 
 - `go test ./...` (or `go test ./...` plus any repo-specific make target)
-- CLI: `cmd/runner` still runs and writes output JSON
+- CLI: `cmd/devtool once` runs and writes output JSON
 - Server: existing health endpoints still work; crawl code path can resolve runners via FX
 - Error cases still write output files when possible (preserve current `RunOnce` semantics)
-

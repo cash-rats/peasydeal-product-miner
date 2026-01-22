@@ -77,7 +77,6 @@ Tool-specific log lines move into each runner (or `RunOnce` logs `runner.Name()`
     - Update call sites gradually to set `Cmd` instead of `CodexCmd`.
 
 This avoids breaking:
-- `cmd/runner/cmd/root.go` (currently only sets `CodexCmd`)
 - `cmd/devtool/cmd/once.go`
 - `internal/app/inngest/crawl/crawl.go`
 
