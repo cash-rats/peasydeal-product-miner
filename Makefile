@@ -67,21 +67,13 @@ docker-doctor:
 docker-shell:
 	docker compose run --rm --build runner sh
 
-.PHONY: docker-login
-docker-login:
-	@if [[ "$(tool)" == "gemini" ]]; then \
-		$(MAKE) docker-gemini-login; \
-	else \
-		$(MAKE) docker-codex-login; \
-	fi
-
 .PHONY: docker-codex-login
 docker-codex-login:
 	@if [[ -f "/.dockerenv" ]]; then echo "Run this on the host (not inside Docker), so your browser can reach the local callback server."; exit 2; fi
 	mkdir -p ./codex
 	@codex_cmd="$${CODEX_CMD:-codex}"; \
 	codex_bin="$$(command -v "$$codex_cmd" || true)"; \
-	if [[ -z "$$codex_bin" ]]; then echo "codex not found in PATH (or CODEX_CMD). Try: CODEX_CMD=/full/path/to/codex make docker-codex-login"; exit 127; fi; \
+	if [[ -z "$$codex_bin" ]]; cho "codex not found in PATH (or CODEX_CMD). Try: CODEX_CMD=/full/path/to/codex make docker-codex-login"; exit 127; fi; \
 	echo "Using Codex: $$codex_bin"; \
 	HOME="$(CURDIR)/codex" "$$codex_bin" login
 
