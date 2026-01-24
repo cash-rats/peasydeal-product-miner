@@ -45,8 +45,7 @@ func NewGeminiRunner(cfg GeminiRunnerConfig) *GeminiRunner {
 
 func (r *GeminiRunner) Name() string { return "gemini" }
 
-func (r *GeminiRunner) CheckAuth() AuthCheck {
-	status := AuthCheck{}
+func (r *GeminiRunner) CheckAuth() error {
 	paths := []string{
 		".gemini/oauth_creds.json",
 		".gemini/google_accounts.json",
@@ -54,21 +53,25 @@ func (r *GeminiRunner) CheckAuth() AuthCheck {
 	for i, rel := range paths {
 		path, pathErr := resolveHomePath(rel)
 		if pathErr != "" {
-			status.FilePath = path
-			status.FileErr = pathErr
-			break
+			return fmt.Errorf("gemini auth file path error: %s", pathErr)
 		}
 		exists, errText := fileStatus(path)
-		if exists || errText != "" || i == len(paths)-1 {
-			status.FilePath = path
-			status.FileExists = exists
-			status.FileErr = errText
+		if errText != "" {
+			return fmt.Errorf("gemini auth file error: %s", errText)
+		}
+		if exists {
 			break
+		}
+		if i == len(paths)-1 {
+			return fmt.Errorf("gemini auth file not found")
 		}
 	}
 
-	status.NetworkOK, status.NetworkErr = r.runAuthProbe()
-	return status
+	ok, errText := r.runAuthProbe()
+	if !ok {
+		return fmt.Errorf("gemini auth probe failed: %s", errText)
+	}
+	return nil
 }
 
 func (r *GeminiRunner) Run(url string, prompt string) (string, error) {

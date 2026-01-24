@@ -45,20 +45,25 @@ func NewCodexRunner(cfg CodexRunnerConfig) *CodexRunner {
 
 func (r *CodexRunner) Name() string { return "codex" }
 
-func (r *CodexRunner) CheckAuth() AuthCheck {
-	status := AuthCheck{}
+func (r *CodexRunner) CheckAuth() error {
 	path, pathErr := resolveHomePath(".codex/auth.json")
-	status.FilePath = path
 	if pathErr != "" {
-		status.FileErr = pathErr
-	} else {
-		exists, errText := fileStatus(path)
-		status.FileExists = exists
-		status.FileErr = errText
+		return fmt.Errorf("codex auth file path error: %s", pathErr)
 	}
 
-	status.NetworkOK, status.NetworkErr = r.runAuthProbe(status.FilePath, status.FileExists)
-	return status
+	exists, errText := fileStatus(path)
+	if errText != "" {
+		return fmt.Errorf("codex auth file error: %s", errText)
+	}
+	if !exists {
+		return fmt.Errorf("codex auth file not found")
+	}
+
+	ok, probeErr := r.runAuthProbe()
+	if !ok {
+		return fmt.Errorf("codex auth probe failed: %s", probeErr)
+	}
+	return nil
 }
 
 func (r *CodexRunner) Run(url string, prompt string) (string, error) {
@@ -159,7 +164,7 @@ func (r *CodexRunner) runModelText(url string, prompt string) (string, error) {
 	return stdout.String(), nil
 }
 
-func (r *CodexRunner) runAuthProbe(filePath string, fileExists bool) (bool, string) {
+func (r *CodexRunner) runAuthProbe() (bool, string) {
 	if strings.TrimSpace(r.cmd) == "" {
 		return false, "missing codex command"
 	}
