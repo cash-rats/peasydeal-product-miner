@@ -2,8 +2,10 @@ package runner
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -23,6 +25,7 @@ type CodexRunner struct {
 	logger           *zap.SugaredLogger
 
 	execCommand func(name string, args ...string) *exec.Cmd
+	execCommandContext func(ctx context.Context, name string, args ...string) *exec.Cmd
 }
 
 func NewCodexRunner(cfg CodexRunnerConfig) *CodexRunner {
@@ -36,10 +39,27 @@ func NewCodexRunner(cfg CodexRunnerConfig) *CodexRunner {
 		skipGitRepoCheck: cfg.SkipGitRepoCheck,
 		logger:           logger,
 		execCommand:      exec.Command,
+		execCommandContext: exec.CommandContext,
 	}
 }
 
 func (r *CodexRunner) Name() string { return "codex" }
+
+func (r *CodexRunner) CheckAuth() AuthCheck {
+	status := AuthCheck{}
+	path, pathErr := resolveHomePath(".codex/auth.json")
+	status.FilePath = path
+	if pathErr != "" {
+		status.FileErr = pathErr
+	} else {
+		exists, errText := fileStatus(path)
+		status.FileExists = exists
+		status.FileErr = errText
+	}
+
+	status.NetworkOK, status.NetworkErr = r.runAuthProbe(status.FilePath, status.FileExists)
+	return status
+}
 
 func (r *CodexRunner) Run(url string, prompt string) (string, error) {
 	modelText, err := r.runModelText(url, prompt)
@@ -137,6 +157,40 @@ func (r *CodexRunner) runModelText(url string, prompt string) (string, error) {
 	)
 
 	return stdout.String(), nil
+}
+
+func (r *CodexRunner) runAuthProbe(filePath string, fileExists bool) (bool, string) {
+	if strings.TrimSpace(r.cmd) == "" {
+		return false, "missing codex command"
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	args := []string{"exec"}
+	if r.skipGitRepoCheck {
+		args = append(args, "--skip-git-repo-check")
+	}
+	if r.model != "" {
+		args = append(args, "--model", r.model)
+	}
+	args = append(args, "Return exactly: OK")
+
+	cmd := r.execCommandContext(ctx, r.cmd, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return false, "timeout"
+		}
+		return false, formatCodexAuthErr()
+	}
+	return true, ""
+}
+
+func formatCodexAuthErr() string {
+	return "Seems like codex is not authenticated"
 }
 
 func (r *CodexRunner) logCodexOutput(url string, out string) {

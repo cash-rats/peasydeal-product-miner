@@ -2,6 +2,7 @@ package runner
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -28,19 +29,47 @@ type GeminiRunner struct {
 	model  string
 	logger *zap.SugaredLogger
 
-	execCommand func(name string, args ...string) *exec.Cmd
+	execCommand        func(name string, args ...string) *exec.Cmd
+	execCommandContext func(ctx context.Context, name string, args ...string) *exec.Cmd
 }
 
 func NewGeminiRunner(cfg GeminiRunnerConfig) *GeminiRunner {
 	return &GeminiRunner{
-		cmd:         cfg.Cmd,
-		model:       cfg.Model,
-		execCommand: exec.Command,
-		logger:      cfg.Logger,
+		cmd:                cfg.Cmd,
+		model:              cfg.Model,
+		execCommand:        exec.Command,
+		execCommandContext: exec.CommandContext,
+		logger:             cfg.Logger,
 	}
 }
 
 func (r *GeminiRunner) Name() string { return "gemini" }
+
+func (r *GeminiRunner) CheckAuth() AuthCheck {
+	status := AuthCheck{}
+	paths := []string{
+		".gemini/oauth_creds.json",
+		".gemini/google_accounts.json",
+	}
+	for i, rel := range paths {
+		path, pathErr := resolveHomePath(rel)
+		if pathErr != "" {
+			status.FilePath = path
+			status.FileErr = pathErr
+			break
+		}
+		exists, errText := fileStatus(path)
+		if exists || errText != "" || i == len(paths)-1 {
+			status.FilePath = path
+			status.FileExists = exists
+			status.FileErr = errText
+			break
+		}
+	}
+
+	status.NetworkOK, status.NetworkErr = r.runAuthProbe()
+	return status
+}
 
 func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 	modelText, err := r.runModelText(url, prompt)
@@ -120,6 +149,33 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 	}
 	r.logGeminiOutput(url, raw)
 	return raw, nil
+}
+
+func (r *GeminiRunner) runAuthProbe() (bool, string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	args := []string{"-o", "json"}
+	if r.model != "" {
+		args = append(args, "--model", r.model)
+	}
+	args = append(args, "Return exactly: OK")
+
+	cmd := r.execCommandContext(ctx, r.cmd, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return false, "timeout"
+		}
+		return false, formatGeminiAuthErr()
+	}
+	return true, ""
+}
+
+func formatGeminiAuthErr() string {
+	return "Seems like gemini is not authenticated"
 }
 
 func (r *GeminiRunner) logGeminiOutput(url string, out string) {

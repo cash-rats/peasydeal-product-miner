@@ -151,9 +151,11 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 		return outPath, res, err
 	}
 
+	authCheck := authCheckPayload(tr.CheckAuth())
 	raw, err := tr.Run(opts.URL, prompt)
 	if err != nil {
 		res := errorResult(opts.URL, err)
+		res["auth_check"] = authCheck
 		outPath, werr := writeResult(opts.OutDir, res)
 		if werr != nil {
 			return "", res, werr
@@ -164,6 +166,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	res, err := parseResult(tr.Name(), raw)
 	if err != nil {
 		res = errorResult(opts.URL, err)
+		res["auth_check"] = authCheck
 		outPath, werr := writeResult(opts.OutDir, res)
 		if werr != nil {
 			return "", res, werr
@@ -175,8 +178,10 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	res.setdefault("source", string(src))
 	res.setdefault("captured_at", nowISO())
 	res.ensureImagesArray()
+	res["auth_check"] = authCheck
 	if verr := validateContract(res); verr != nil {
 		res = errorResult(opts.URL, verr)
+		res["auth_check"] = authCheck
 		outPath, werr := writeResult(opts.OutDir, res)
 		if werr != nil {
 			return "", res, werr
@@ -190,6 +195,16 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 
 func nowISO() string {
 	return time.Now().UTC().Format(time.RFC3339Nano)
+}
+
+func authCheckPayload(check AuthCheck) map[string]any {
+	return map[string]any{
+		"file_path":   check.FilePath,
+		"file_exists": check.FileExists,
+		"file_err":    check.FileErr,
+		"network_ok":  check.NetworkOK,
+		"network_err": check.NetworkErr,
+	}
 }
 
 func loadPrompt(promptPath string, url string) (string, error) {
