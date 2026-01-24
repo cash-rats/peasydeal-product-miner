@@ -209,3 +209,30 @@ Notes:
 - If you're using `inngest-cli dev` on the host, set `INNGEST_DEV=http://host.docker.internal:8288` so the container can register/sync with the dev server.
 - Codex/Gemini auth is persisted via `./codex/.codex` and `./gemini/.gemini` volume mounts.
 - Containers use `HOME=/home/app` and symlink `~/.codex` → `/codex/.codex`, `~/.gemini` → `/gemini/.gemini` (see `entrypoint.sh`).
+
+## Deploy (VPS via GHCR + Docker Compose)
+
+This repo includes a simple deployment script that copies `docker-compose.yml` and a runtime `.env` to a remote host, then pulls and restarts the `server` service.
+
+1) Create env files (one-time per machine):
+
+```bash
+cp .env.deploy.example .env.deploy.<name>
+cp .env.prod.example .env.prod.<name>
+```
+
+2) Edit the files:
+- `.env.deploy.<name>`: host + SSH + GHCR credentials
+- `.env.prod.<name>`: runtime env (including `INNGEST_APP_ID` + `INNGEST_SIGNING_KEY`)
+
+3) Deploy:
+
+```bash
+./scripts/deploy.sh <name>
+```
+
+To build and push a new image before deploy:
+
+```bash
+./scripts/deploy.sh <name> --build
+```

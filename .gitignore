@@ -3,6 +3,9 @@
 
 # Local env (docker compose reads this)
 .env
+.env.*
+!.env.deploy.example
+!.env.prod.example
 
 # Crawl outputs
 /out/

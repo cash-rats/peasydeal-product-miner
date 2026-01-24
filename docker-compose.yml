@@ -1,8 +1,12 @@
 services:
   server:
+    image: ghcr.io/${GHCR_USER}/peasydeal-product-miner:latest
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
     environment:
       - HOME=/home/app
 
@@ -24,6 +28,11 @@ services:
       - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY:-}
       - INNGEST_SERVE_HOST=${INNGEST_SERVE_HOST:-}
       - INNGEST_SERVE_PATH=${INNGEST_SERVE_PATH:-}
+
+      - TURSO_SQLITE_DSN=${TURSO_SQLITE_DSN:-}
+      - TURSO_SQLITE_TOKEN=${TURSO_SQLITE_TOKEN:-}
+      - TURSO_SQLITE_PATH=${TURSO_SQLITE_PATH:-}
+      - TURSO_SQLITE_DRIVER=${TURSO_SQLITE_DRIVER:-sqlite}
     ports:
       - "${APP_PORT:-3012}:${APP_PORT:-3012}"
     volumes:
@@ -34,9 +43,12 @@ services:
     command: ["/app/server"]
 
   runner:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
     environment:
       - HOME=/home/app
       - CODEX_SKIP_GIT_REPO_CHECK=${CODEX_SKIP_GIT_REPO_CHECK:-1}

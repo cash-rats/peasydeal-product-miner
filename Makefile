@@ -24,6 +24,8 @@ help:
 	"  make docker-once tool=codex|gemini url=<product_url>  Crawl one URL in Docker (parity check)" \
 	"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
 	"  make docker-login tool=codex|gemini  Authorize host tool for the Docker runner" \
+	"  make ghcr-login               Login to GHCR using GHCR_USER and GHCR_TOKEN from .env" \
+	"  make deploy env=<name> build=1        Deploy to remote server via scripts/deploy.sh" \
 	"  make goose-create name=<migration_name>  Create a goose SQL migration in db/migrations"
 
 .PHONY: start
@@ -87,6 +89,31 @@ docker-gemini-login:
 	echo "Using Gemini: $$gemini_bin"; \
 	echo "Please check if your Gemini CLI requires authentication or is already authenticated."; \
 	HOME="$(CURDIR)/gemini" "$$gemini_bin"
+
+.PHONY: ghcr-login
+ghcr-login:
+	@if [ -z "$$GHCR_USER" ]; then \
+		echo "Error: Missing GHCR_USER (set in .env)."; \
+		exit 1; \
+	fi
+	@if [ -z "$$GHCR_TOKEN" ]; then \
+		echo "Error: Missing GHCR_TOKEN (set in .env)."; \
+		exit 1; \
+	fi
+	@echo "$$GHCR_TOKEN" | docker login ghcr.io -u "$$GHCR_USER" --password-stdin
+
+.PHONY: deploy
+deploy:
+	@if [ -z "$(env)" ]; then \
+		echo "Error: Missing env name."; \
+		echo "Usage: make deploy env=<name> [build=1]"; \
+		exit 1; \
+	fi
+	@if [ "$(build)" = "1" ]; then \
+		./scripts/deploy.sh "$(env)" --build; \
+	else \
+		./scripts/deploy.sh "$(env)"; \
+	fi
 
 .PHONY: goose-create
 goose-create:
