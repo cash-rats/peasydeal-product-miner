@@ -4,6 +4,7 @@
 # Local env (docker compose reads this)
 .env
 .env.*
+!.env.example
 !.env.deploy.example
 !.env.prod.example
 
