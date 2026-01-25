@@ -40,7 +40,7 @@ func NewViper() *viper.Viper {
 	vp.SetDefault("redis.password", "")
 	vp.SetDefault("redis.db", 0)
 
-	vp.SetDefault("inngest.dev", "-1")
+	vp.SetDefault("inngest.dev", "")
 	vp.SetDefault("inngest.app_id", "")
 	vp.SetDefault("inngest.signing_key", "")
 	vp.SetDefault("inngest.event_key", "")
