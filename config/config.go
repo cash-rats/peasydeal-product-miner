@@ -40,9 +40,10 @@ func NewViper() *viper.Viper {
 	vp.SetDefault("redis.password", "")
 	vp.SetDefault("redis.db", 0)
 
-	vp.SetDefault("inngest.dev", "")
+	vp.SetDefault("inngest.dev", "-1")
 	vp.SetDefault("inngest.app_id", "")
 	vp.SetDefault("inngest.signing_key", "")
+	vp.SetDefault("inngest.event_key", "")
 	vp.SetDefault("inngest.serve_host", "")
 	vp.SetDefault("inngest.serve_path", "")
 
@@ -96,6 +97,7 @@ type Config struct {
 		Dev        string `mapstructure:"dev"`
 		AppID      string `mapstructure:"app_id"`
 		SigningKey string `mapstructure:"signing_key"`
+		EventKey   string `mapstructure:"event_key"`
 		ServeHost  string `mapstructure:"serve_host"`
 		ServePath  string `mapstructure:"serve_path"`
 	} `mapstructure:"inngest"`

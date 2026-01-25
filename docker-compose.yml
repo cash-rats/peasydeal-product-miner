@@ -23,7 +23,7 @@ services:
       - CODEX_MODEL=${CODEX_MODEL:-gpt-5.2}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
 
-      - INNGEST_DEV=${INNGEST_DEV:-1}
+      - INNGEST_DEV=${INNGEST_DEV:-}
       - INNGEST_APP_ID=${INNGEST_APP_ID:-peasydeal-product-miner}
       - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY:-}
       - INNGEST_SERVE_HOST=${INNGEST_SERVE_HOST:-}

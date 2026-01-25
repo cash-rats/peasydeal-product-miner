@@ -79,8 +79,8 @@ fi
 if [[ "$BUILD" == "1" ]]; then
   echo "Building + pushing image: $IMAGE"
   echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-  docker compose build -t "$IMAGE" "$ROOT_DIR"
-  docker compose push "$IMAGE"
+  docker compose -f "$COMPOSE_FILE" build "$SERVICE_NAME"
+  docker compose -f "$COMPOSE_FILE" push "$SERVICE_NAME"
 fi
 
 echo "Deploying to ${PROD_USER}@${PROD_HOST}:${PROD_DIR}"
