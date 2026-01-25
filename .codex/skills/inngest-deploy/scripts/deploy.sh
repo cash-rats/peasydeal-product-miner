@@ -88,7 +88,7 @@ deploy_one() {
     cd '$PROD_DIR'
     docker compose --env-file '$ENV_REMOTE_NAME' $COMPOSE_FLAGS pull
     docker compose --env-file '$ENV_REMOTE_NAME' $COMPOSE_FLAGS up -d --no-deps --remove-orphans
-    docker system prune -a --volumes --force
+    docker system prune -af
   "
   echo "✅ [$machine] done."
 }

@@ -67,7 +67,6 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 		)
 
 		// DEBUG MODE: Skip real Chrome DevTools checks to isolate Inngest execution & logging.
-
 		checkURL, effectiveHost := chromedevtools.VersionURLResolved(ctx, f.cfg.Chrome.DebugHost, f.cfg.Chrome.DebugPort)
 		if strings.TrimSpace(f.cfg.Chrome.DebugHost) != "" && effectiveHost != strings.TrimSpace(f.cfg.Chrome.DebugHost) {
 			f.logger.Infow("chrome_devtools_host_resolved",

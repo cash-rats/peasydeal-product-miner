@@ -19,6 +19,7 @@ description: Deployment-focused guidance for Inngest-based services. Use when as
 ## Required checks
 - Ensure required Inngest env keys exist in `.env.prod.*` (e.g., `INNGEST_APP_ID`, `INNGEST_SIGNING_KEY`, `INNGEST_EVENT_KEY` if used).
 - Ensure registry credentials exist for image pull/push (GHCR `GHCR_USER`/`GHCR_TOKEN`).
+- If `docker-compose.yml` references `GHCR_USER` in image tags, ensure `GHCR_USER` is present in `.env.prod.*` (runtime env on server).
 - Ensure remote path/host/SSH details are provided in `.env.deploy.*`.
 
 ## Env example
@@ -51,6 +52,7 @@ INNGEST_SIGNING_KEY=...
 - A reusable deploy template is provided at `scripts/deploy.sh`.
 - Adapt `COMPOSE_FILE`, `SERVICE_NAME`, registry login variables, and required env keys for the project.
 - If your deploy uses a non-22 SSH port, ensure the script uses `ssh -p` and `scp -P` (note the case difference).
+- Template deploys run `docker system prune -af` after `up` to clear unused Docker resources.
 
 ## What to ask the user
 - Target machine(s) or environment.
