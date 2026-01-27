@@ -19,6 +19,11 @@ help:
 	"  make start                     Start long-lived HTTP server (/health)" \
 	"  make dev-chrome                 Start Chrome with DevTools enabled" \
 	"  make dev-doctor                 Check DevTools is reachable on localhost" \
+	"  make devtool-build              Build Linux devtool binary (out/devtool-linux-amd64)" \
+	"  make devtool-upload env=<name> [dest=<remote_path>]  Upload devtool binary to server" \
+	"  make devtool-deploy env=<name> [dest=<remote_path>]  Build + upload devtool to server" \
+	"  make auth-upload env=<name> [auth_tool=codex|gemini|both]  Upload tool auth/config to server" \
+	"  make auth-deploy env=<name> [auth_tool=codex|gemini|both]  Login (host) then upload auth/config" \
 	"  make dev-once tool=codex|gemini url=<product_url>  Crawl one URL on the host (fast loop)" \
 	"  make docker-doctor tool=codex|gemini  Check Chrome + tool auth for Docker runs" \
 	"  make docker-once tool=codex|gemini url=<product_url>  Crawl one URL in Docker (parity check)" \
@@ -49,6 +54,29 @@ dev-chrome:
 dev-doctor:
 	go run ./cmd/devtool doctor
 
+.PHONY: devtool-build
+DEVTOOL_BIN ?= out/devtool-linux-amd64
+devtool-build:
+	@mkdir -p "$(dir $(DEVTOOL_BIN))"
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+		go build -trimpath -ldflags="-s -w" -o "$(DEVTOOL_BIN)" ./cmd/devtool
+	@echo "Built: $(DEVTOOL_BIN)"
+
+.PHONY: devtool-upload
+devtool-upload:
+	@if [ -z "$(env)" ]; then \
+		echo "Error: Missing env name."; \
+		echo "Usage: make devtool-upload env=<name> [dest=/path/on/server/devtool]"; \
+		exit 1; \
+	fi
+	@dest="$(strip $(dest))"; \
+	args=(); \
+	if [ -n "$$dest" ]; then args+=(--dest "$$dest"); fi; \
+	bash ./scripts/deploy-devtool.sh "$(env)" --bin "$(DEVTOOL_BIN)" "$${args[@]}"
+
+.PHONY: devtool-deploy
+devtool-deploy: devtool-build devtool-upload
+
 .PHONY: dev-once
 dev-once: dev-doctor
 	@URL="$(strip $(url))"; \
@@ -69,13 +97,21 @@ docker-doctor:
 docker-shell:
 	docker compose run --rm --build runner sh
 
+.PHONY: docker-login
+docker-login:
+	@case "$(tool)" in \
+		codex) $(MAKE) docker-codex-login ;; \
+		gemini) $(MAKE) docker-gemini-login ;; \
+		*) echo "Error: unknown tool '$(tool)' (expected codex or gemini)"; exit 2 ;; \
+	esac
+
 .PHONY: docker-codex-login
 docker-codex-login:
 	@if [[ -f "/.dockerenv" ]]; then echo "Run this on the host (not inside Docker), so your browser can reach the local callback server."; exit 2; fi
 	mkdir -p ./codex
 	@codex_cmd="$${CODEX_CMD:-codex}"; \
 	codex_bin="$$(command -v "$$codex_cmd" || true)"; \
-	if [[ -z "$$codex_bin" ]]; cho "codex not found in PATH (or CODEX_CMD). Try: CODEX_CMD=/full/path/to/codex make docker-codex-login"; exit 127; fi; \
+	if [[ -z "$$codex_bin" ]]; then echo "codex not found in PATH (or CODEX_CMD). Try: CODEX_CMD=/full/path/to/codex make docker-codex-login"; exit 127; fi; \
 	echo "Using Codex: $$codex_bin"; \
 	HOME="$(CURDIR)/codex" "$$codex_bin" login
 
@@ -89,6 +125,27 @@ docker-gemini-login:
 	echo "Using Gemini: $$gemini_bin"; \
 	echo "Please check if your Gemini CLI requires authentication or is already authenticated."; \
 	HOME="$(CURDIR)/gemini" "$$gemini_bin"
+
+.PHONY: auth-upload
+auth_tool ?= both
+auth-upload:
+	@if [ -z "$(env)" ]; then \
+		echo "Error: Missing env name."; \
+		echo "Usage: make auth-upload env=<name> [auth_tool=codex|gemini|both]"; \
+		exit 1; \
+	fi
+	@bash ./scripts/deploy-auth.sh "$(env)" --tool "$(auth_tool)"
+
+.PHONY: auth-deploy
+auth-deploy:
+	@if [[ -f "/.dockerenv" ]]; then echo "Run this on the host (not inside Docker), so your browser can reach the local callback server."; exit 2; fi
+	@case "$(auth_tool)" in \
+		codex) $(MAKE) docker-codex-login ;; \
+		gemini) $(MAKE) docker-gemini-login ;; \
+		both) $(MAKE) docker-codex-login && $(MAKE) docker-gemini-login ;; \
+		*) echo "Error: unknown auth_tool '$(auth_tool)' (expected codex, gemini, or both)"; exit 2 ;; \
+	esac
+	@$(MAKE) auth-upload env="$(env)" auth_tool="$(auth_tool)"
 
 .PHONY: ghcr-login
 ghcr-login:
