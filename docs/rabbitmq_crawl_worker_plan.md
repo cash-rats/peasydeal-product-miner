@@ -244,7 +244,7 @@ RabbitMQ config lives in `config/config.go` under `Config.RabbitMQ` (FX-injected
 - [x] Implement worker “handler” that maps steps exactly: validate → devtools check (no persist on fail) → resolve out_dir → run crawler (persist failures) → persist draft (ack only after success)
 - [x] Add Turso migration: `product_drafts.event_id` column + UNIQUE index
 - [x] Update `ProductDraftStore.UpsertFromCrawlResult` to upsert on `event_id` and return stable `draft_id`
-- [ ] Add `cmd/worker/main.go` entrypoint wiring CoreAppOptions + SQLiteModule + runner providers + crawlworker module
+- [x] Add `cmd/worker/main.go` entrypoint wiring CoreAppOptions + SQLiteModule + runner providers + crawlworker module
 - [ ] Add docker-compose worker service (and rabbitmq service if not already) for local dev
 - [ ] Add minimal run docs (env vars, `make` target or `go run ./cmd/worker`)
 - [ ] Add a basic integration test or harness (optional) to publish one message and assert a draft row is written (skip if test infra too heavy)

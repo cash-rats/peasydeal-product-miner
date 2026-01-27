@@ -10,6 +10,7 @@ import (
 	"peasydeal-product-miner/config"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
@@ -29,6 +30,8 @@ type Consumer struct {
 }
 
 type NewConsumerParams struct {
+	fx.In
+
 	Config  *config.Config
 	Channel *amqp.Channel
 	Handler Handler `optional:"true"`

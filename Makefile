@@ -17,6 +17,7 @@ help:
 	@printf "%s\n" \
 	"Targets:" \
 	"  make start                     Start long-lived HTTP server (/health)" \
+	"  make worker                    Start RabbitMQ crawl worker (AMQP consumer)" \
 	"  make dev-chrome                 Start Chrome with DevTools enabled" \
 	"  make dev-doctor                 Check DevTools is reachable on localhost" \
 	"  make devtool-build              Build Linux devtool binary (out/devtool-linux-amd64)" \
@@ -36,6 +37,10 @@ help:
 .PHONY: start
 start:
 	go run ./cmd/server
+
+.PHONY: worker
+worker:
+	go run ./cmd/worker
 
 ## start/inngest: start the inngest dev server
 .PHONY: start/inngest
