@@ -27,6 +27,8 @@ type Consumer struct {
 	logger  *zap.SugaredLogger
 
 	consumerTag string
+	consumeCtx  context.Context
+	cancel      context.CancelFunc
 }
 
 type NewConsumerParams struct {
@@ -57,6 +59,10 @@ func (c *Consumer) Start(ctx context.Context) error {
 	if c.cfg == nil || strings.TrimSpace(c.cfg.RabbitMQ.URL) == "" || c.channel == nil {
 		c.logger.Infow("crawlworker_disabled", "reason", "missing rabbitmq config or channel")
 		return nil
+	}
+
+	if c.consumeCtx == nil || c.cancel == nil {
+		c.consumeCtx, c.cancel = context.WithCancel(context.Background())
 	}
 
 	if c.cfg.RabbitMQ.DeclareTopology {
@@ -95,13 +101,13 @@ func (c *Consumer) Start(ctx context.Context) error {
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
+			case <-c.consumeCtx.Done():
 				return
 			case d, ok := <-deliveries:
 				if !ok {
 					return
 				}
-				c.handleDelivery(ctx, d)
+				c.handleDelivery(c.consumeCtx, d)
 			}
 		}
 	}()
@@ -113,6 +119,9 @@ func (c *Consumer) Stop(ctx context.Context) error {
 	_ = ctx
 	if c.channel == nil {
 		return nil
+	}
+	if c.cancel != nil {
+		c.cancel()
 	}
 	_ = c.channel.Cancel(c.consumerTag, false)
 	return nil

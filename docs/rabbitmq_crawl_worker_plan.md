@@ -211,6 +211,40 @@ RabbitMQ config lives in `config/config.go` under `Config.RabbitMQ` (FX-injected
 - `rabbitmq.prefetch` (`RABBITMQ_PREFETCH`): default `1`
 - `rabbitmq.declare_topology` (`RABBITMQ_DECLARE_TOPOLOGY`): default `true`
 
+## How to run (minimal)
+
+### Pure Go (host)
+
+1) Ensure RabbitMQ is running (local install or Docker), and Chrome DevTools is reachable.
+2) Run DB migrations once (SQLite/Turso):
+   - `TURSO_SQLITE_PATH=file:./out/turso.db go run ./cmd/migrate up`
+3) Start the worker:
+   - `RABBITMQ_URL=amqp://guest:guest@localhost:5672/ TURSO_SQLITE_PATH=file:./out/turso.db make worker`
+
+Minimum env vars (host):
+
+- `RABBITMQ_URL`
+- `CHROME_DEBUG_HOST`, `CHROME_DEBUG_PORT` (if not defaults)
+- `TURSO_SQLITE_PATH` (local file) **or** `TURSO_SQLITE_DSN` (+ `TURSO_SQLITE_TOKEN` if remote)
+- `CRAWL_TOOL`, plus tool auth/config for `codex`/`gemini`
+
+### Docker Compose (local)
+
+- `docker compose up rabbitmq worker`
+- RabbitMQ management UI: `http://localhost:15672` (default `guest/guest`)
+
+### Integration test (real handler)
+
+This is opt-in and hits the real crawler + your dedicated RabbitMQ vhost.
+
+```bash
+AMQP_E2E_REAL=1 \
+RABBITMQ_URL=amqp://user:pass@host:5672/your_vhost \
+AMQP_E2E_URL=https://example.com/product/123 \
+TURSO_SQLITE_PATH=file:./out/turso.db \
+go test -tags=integration ./internal/app/amqp/crawlworker/tests -run TestCrawlWorkerRealHandlerSuite
+```
+
 ## Error policy summary (exactness checklist)
 
 - Missing URL / invalid JSON: reject, no requeue, DLQ.
@@ -245,7 +279,7 @@ RabbitMQ config lives in `config/config.go` under `Config.RabbitMQ` (FX-injected
 - [x] Add Turso migration: `product_drafts.event_id` column + UNIQUE index
 - [x] Update `ProductDraftStore.UpsertFromCrawlResult` to upsert on `event_id` and return stable `draft_id`
 - [x] Add `cmd/worker/main.go` entrypoint wiring CoreAppOptions + SQLiteModule + runner providers + crawlworker module
-- [ ] Add docker-compose worker service (and rabbitmq service if not already) for local dev
-- [ ] Add minimal run docs (env vars, `make` target or `go run ./cmd/worker`)
-- [ ] Add a basic integration test or harness (optional) to publish one message and assert a draft row is written (skip if test infra too heavy)
+- [x] Add docker-compose worker service (and rabbitmq service if not already) for local dev
+- [x] Add minimal run docs (env vars, `make` target or `go run ./cmd/worker`)
+- [x] Add a basic integration test or harness (optional) to publish one message and assert a draft row is written (skip if test infra too heavy)
 - [ ] (Later) Add producer HTTP endpoint to publish crawl requests and return `202 {event_id}`
