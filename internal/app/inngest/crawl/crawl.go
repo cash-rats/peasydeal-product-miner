@@ -164,9 +164,10 @@ func (f *CrawlFunction) Handle(ctx context.Context, input inngestgo.Input[CrawlR
 		}
 
 		id, err := f.store.UpsertFromCrawlResult(ctx, productdrafts.UpsertFromCrawlResultInput{
-			EventID: eventID,
-			URL:     url,
-			Result:  r.Result,
+			EventID:   eventID,
+			CreatedBy: "inngest",
+			URL:       url,
+			Result:    r.Result,
 		})
 		if err != nil {
 			f.logger.Errorw(

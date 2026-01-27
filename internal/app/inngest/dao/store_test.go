@@ -61,6 +61,28 @@ func TestProductDraftStore_UpsertFromCrawlResult_E2E_TursoSQLite(t *testing.T) {
 	}
 	require.NoError(t, err)
 
+	// Ensure the new column exists (migration applied).
+	var hasEventIDCol bool
+	rows, err := conn.Query("pragma table_info(product_drafts)")
+	require.NoError(t, err)
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name string
+		var ctype string
+		var notnull int
+		var dflt sql.NullString
+		var pk int
+		require.NoError(t, rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk))
+		if name == "event_id" {
+			hasEventIDCol = true
+		}
+	}
+	require.NoError(t, rows.Err())
+	if !hasEventIDCol {
+		t.Fatalf("missing column product_drafts.event_id; run migrations (e.g. `go run ./cmd/migrate up`) against your Turso DB")
+	}
+
 	const raw = `{
   "captured_at": "2026-01-21T04:24:31.695Z",
   "currency": "TWD",
@@ -81,12 +103,13 @@ func TestProductDraftStore_UpsertFromCrawlResult_E2E_TursoSQLite(t *testing.T) {
 
 	eventID := uuid.NewString()
 	draftID, err := store.UpsertFromCrawlResult(context.Background(), UpsertFromCrawlResultInput{
-		EventID: eventID,
-		URL:     url,
-		Result:  res,
+		EventID:   eventID,
+		CreatedBy: "test",
+		URL:       url,
+		Result:    res,
 	})
 	require.NoError(t, err)
-	require.Equal(t, eventID, draftID)
+	require.NotEmpty(t, draftID)
 
 	t.Cleanup(func() {
 		_, _ = conn.Exec(conn.Rebind("DELETE FROM product_drafts WHERE id = ?"), draftID)
@@ -96,12 +119,16 @@ func TestProductDraftStore_UpsertFromCrawlResult_E2E_TursoSQLite(t *testing.T) {
 	var gotStatus string
 	var gotError sql.NullString
 	var gotURL string
+	var gotEventID sql.NullString
 	require.NoError(t, conn.QueryRow(
-		conn.Rebind("SELECT draft_payload, status, error, url FROM product_drafts WHERE id = ?"),
+		conn.Rebind("SELECT draft_payload, status, error, url, event_id FROM product_drafts WHERE id = ?"),
 		draftID,
-	).Scan(&gotPayload, &gotStatus, &gotError, &gotURL))
+	).Scan(&gotPayload, &gotStatus, &gotError, &gotURL, &gotEventID))
 
 	log.Printf("~~ %v", gotPayload)
+
+	require.True(t, gotEventID.Valid)
+	require.Equal(t, eventID, gotEventID.String)
 
 	// require.Equal(t, "READY_FOR_REVIEW", gotStatus)
 	// require.False(t, gotError.Valid)
