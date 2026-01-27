@@ -198,6 +198,18 @@ When we add a first-class producer later, the recommended approach is an HTTP en
   - `RABBITMQ_QUEUE=crawler.url.requested.v1`
   - `RABBITMQ_ROUTING_KEY=crawler.url.requested.v1`
   - `RABBITMQ_PREFETCH=1`
+  - `RABBITMQ_DECLARE_TOPOLOGY=true`
+
+### Config keys + defaults
+
+RabbitMQ config lives in `config/config.go` under `Config.RabbitMQ` (FX-injected as `*config.Config`), using these keys (and their corresponding env vars):
+
+- `rabbitmq.url` (`RABBITMQ_URL`): default `""` (disabled)
+- `rabbitmq.exchange` (`RABBITMQ_EXCHANGE`): default `events`
+- `rabbitmq.queue` (`RABBITMQ_QUEUE`): default `crawler.url.requested.v1`
+- `rabbitmq.routing_key` (`RABBITMQ_ROUTING_KEY`): default `crawler.url.requested.v1`
+- `rabbitmq.prefetch` (`RABBITMQ_PREFETCH`): default `1`
+- `rabbitmq.declare_topology` (`RABBITMQ_DECLARE_TOPOLOGY`): default `true`
 
 ## Error policy summary (exactness checklist)
 
@@ -226,7 +238,7 @@ When we add a first-class producer later, the recommended approach is an HTTP en
 - [x] Confirm RabbitMQ topology decision: worker declares exchange/queue/bindings vs pre-provisioned
 - [x] Confirm message contract v1 (JSON fields, `event_id` source, routing key naming)
 - [x] Confirm idempotency rule: `event_id` must upsert (no duplicates) (via `product_drafts.event_id` UNIQUE)
-- [ ] Add AMQP config fields (optional env vars; defaults keep worker startable)
+- [x] Add AMQP config fields (optional env vars; defaults keep worker startable)
 - [ ] Create `internal/pkg/amqpclient` with FX-provided connection/channel + `fx.Lifecycle` close hooks
 - [ ] Create `internal/app/amqp/crawlworker` consumer module (manual ack, `prefetch=1`, DLQ on failures)
 - [ ] Implement worker “handler” that maps steps exactly: validate → devtools check (no persist on fail) → resolve out_dir → run crawler (persist failures) → persist draft (ack only after success)

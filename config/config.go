@@ -47,6 +47,13 @@ func NewViper() *viper.Viper {
 	vp.SetDefault("inngest.serve_host", "")
 	vp.SetDefault("inngest.serve_path", "")
 
+	vp.SetDefault("rabbitmq.url", "")
+	vp.SetDefault("rabbitmq.exchange", "events")
+	vp.SetDefault("rabbitmq.queue", "crawler.url.requested.v1")
+	vp.SetDefault("rabbitmq.routing_key", "crawler.url.requested.v1")
+	vp.SetDefault("rabbitmq.prefetch", 1)
+	vp.SetDefault("rabbitmq.declare_topology", true)
+
 	vp.SetDefault("turso.sqlite_dsn", "")
 	vp.SetDefault("turso.sqlite_token", "")
 	vp.SetDefault("turso.sqlite_path", "")
@@ -101,6 +108,15 @@ type Config struct {
 		ServeHost  string `mapstructure:"serve_host"`
 		ServePath  string `mapstructure:"serve_path"`
 	} `mapstructure:"inngest"`
+
+	RabbitMQ struct {
+		URL             string `mapstructure:"url"`
+		Exchange        string `mapstructure:"exchange"`
+		Queue           string `mapstructure:"queue"`
+		RoutingKey      string `mapstructure:"routing_key"`
+		Prefetch        int    `mapstructure:"prefetch"`
+		DeclareTopology bool   `mapstructure:"declare_topology"`
+	} `mapstructure:"rabbitmq"`
 
 	Turso struct {
 		DSN    string `mapstructure:"sqlite_dsn"`
