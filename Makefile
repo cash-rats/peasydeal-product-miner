@@ -129,7 +129,7 @@ docker-gemini-login:
 	if [[ -z "$$gemini_bin" ]]; then echo "gemini not found in PATH (or GEMINI_CMD). Try: GEMINI_CMD=/full/path/to/gemini make docker-gemini-login"; exit 127; fi; \
 	echo "Using Gemini: $$gemini_bin"; \
 	echo "Please check if your Gemini CLI requires authentication or is already authenticated."; \
-	HOME="$(CURDIR)/gemini" "$$gemini_bin"
+	HOME="$(CURDIR)/gemini" "$$gemini_bin" --prompt "Just Return exactly: OK"
 
 .PHONY: auth-upload
 auth_tool ?= both
