@@ -60,8 +60,7 @@ services:
         - linux/amd64
     depends_on:
       - rabbitmq
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    network_mode: host
     environment:
       - HOME=/home/app
 
