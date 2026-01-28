@@ -41,6 +41,8 @@ services:
       - TURSO_SQLITE_DRIVER=${TURSO_SQLITE_DRIVER:-sqlite}
     ports:
       - "${APP_PORT:-3012}:${APP_PORT:-3012}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./out:/out
       - ./config:/app/config:ro
@@ -58,6 +60,8 @@ services:
         - linux/amd64
     depends_on:
       - rabbitmq
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - HOME=/home/app
 
@@ -103,6 +107,8 @@ services:
       - CHROME_DEBUG_PORT=${CHROME_DEBUG_PORT:-9222}
       - CODEX_MODEL=${CODEX_MODEL:-gpt-5.2}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     stdin_open: true
     tty: true
     volumes:
