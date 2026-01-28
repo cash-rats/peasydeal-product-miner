@@ -1,10 +1,4 @@
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-
   server:
     image: ghcr.io/${GHCR_USER}/peasydeal-product-miner:latest
     platform: linux/amd64
@@ -58,8 +52,7 @@ services:
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
-    depends_on:
-      - rabbitmq
+    # RabbitMQ is provided by a managed cloud instance.
     network_mode: host
     environment:
       - HOME=/home/app

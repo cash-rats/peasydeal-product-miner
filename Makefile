@@ -24,7 +24,6 @@ help:
 	"  make devtool-upload env=<name> [dest=<remote_path>]  Upload devtool binary to server" \
 	"  make devtool-deploy env=<name> [dest=<remote_path>]  Build + upload devtool to server" \
 	"  make auth-upload env=<name> [auth_tool=codex|gemini|both]  Upload tool auth/config to server" \
-	"  make auth-deploy env=<name> [auth_tool=codex|gemini|both]  Login (host) then upload auth/config" \
 	"  make dev-once tool=codex|gemini url=<product_url>  Crawl one URL on the host (fast loop)" \
 	"  make docker-doctor tool=codex|gemini  Check Chrome + tool auth for Docker runs" \
 	"  make docker-once tool=codex|gemini url=<product_url>  Crawl one URL in Docker (parity check)" \
@@ -140,17 +139,6 @@ auth-upload:
 		exit 1; \
 	fi
 	@bash ./scripts/deploy-auth.sh "$(env)" --tool "$(auth_tool)"
-
-.PHONY: auth-deploy
-auth-deploy:
-	@if [[ -f "/.dockerenv" ]]; then echo "Run this on the host (not inside Docker), so your browser can reach the local callback server."; exit 2; fi
-	@case "$(auth_tool)" in \
-		codex) $(MAKE) docker-codex-login ;; \
-		gemini) $(MAKE) docker-gemini-login ;; \
-		both) $(MAKE) docker-codex-login && $(MAKE) docker-gemini-login ;; \
-		*) echo "Error: unknown auth_tool '$(auth_tool)' (expected codex, gemini, or both)"; exit 2 ;; \
-	esac
-	@$(MAKE) auth-upload env="$(env)" auth_tool="$(auth_tool)"
 
 .PHONY: ghcr-login
 ghcr-login:
