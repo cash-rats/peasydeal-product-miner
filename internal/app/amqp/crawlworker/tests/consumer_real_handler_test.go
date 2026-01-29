@@ -81,7 +81,7 @@ func (s *CrawlWorkerRealHandlerSuite) TestConsumeAndPersistRealHandler() {
 		EventID:   eventID,
 		TS:        time.Now().UTC(),
 		Data: crawlworker.CrawlRequestedEventData{
-			URL:    "https://shopee.tw/Samsung-Galaxy-AI-S24-(8GB-256GB)%E6%99%BA%E6%85%A7%E5%9E%8B%E6%89%8B%E6%A9%9F-%E8%9D%A6%E5%B9%A3%E4%BA%94%E5%80%8D%E9%80%81-i.971753850.24360591068",
+			URL:    "https://s.shopee.tw/8zyuCXG9GV",
 			OutDir: "out",
 		},
 	}
