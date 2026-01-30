@@ -72,7 +72,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawURL := strings.TrimSpace(req.URL)
+	rawURL := req.URL
 	if rawURL == "" {
 		render.ChiErr(w, http.StatusBadRequest, "missing url")
 		return
@@ -87,7 +87,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		render.ChiErr(w, http.StatusBadRequest, "url must be http(s)")
 		return
 	}
-	host := strings.TrimSpace(strings.ToLower(parsed.Hostname()))
+	host := strings.ToLower(parsed.Hostname())
 	if host == "" {
 		render.ChiErr(w, http.StatusBadRequest, "invalid url host")
 		return
@@ -97,16 +97,16 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.cfg == nil || strings.TrimSpace(h.cfg.RabbitMQ.URL) == "" || h.publish == nil {
+	if h.cfg == nil || h.cfg.RabbitMQ.URL == "" || h.publish == nil {
 		render.ChiErr(w, http.StatusServiceUnavailable, "rabbitmq disabled")
 		return
 	}
 
-	ex := strings.TrimSpace(h.cfg.RabbitMQ.Exchange)
+	ex := h.cfg.RabbitMQ.Exchange
 	if ex == "" {
 		ex = "events"
 	}
-	routingKey := strings.TrimSpace(h.cfg.RabbitMQ.RoutingKey)
+	routingKey := h.cfg.RabbitMQ.RoutingKey
 	if routingKey == "" {
 		routingKey = "crawler.url.requested.v1"
 	}
@@ -153,7 +153,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func eventIDFromURL(u string) string {
-	sum := sha256.Sum256([]byte(strings.TrimSpace(u)))
+	sum := sha256.Sum256([]byte(u))
 	return "urlsha256:" + hex.EncodeToString(sum[:])
 }
 
