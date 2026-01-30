@@ -11,6 +11,7 @@ import (
 
 	"peasydeal-product-miner/config"
 	"peasydeal-product-miner/internal/app/amqp/crawlworker"
+	"peasydeal-product-miner/internal/app/amqp/productdrafts"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
@@ -73,6 +74,7 @@ func TestHandler_Handle_RabbitMQDisabled(t *testing.T) {
 func TestHandler_Handle_OK_PublishesDeterministicEventID(t *testing.T) {
 	var gotExchange, gotKey string
 	var gotPublishing amqp.Publishing
+	var gotQueuedEventID, gotQueuedURL, gotQueuedSource string
 
 	cfg := &config.Config{}
 	cfg.RabbitMQ.URL = "amqp://example"
@@ -83,6 +85,13 @@ func TestHandler_Handle_OK_PublishesDeterministicEventID(t *testing.T) {
 	h := &Handler{
 		cfg:    cfg,
 		logger: zap.NewNop().Sugar(),
+		store: queuedDraftWriterFunc(func(ctx context.Context, in productdrafts.UpsertQueuedForDraftInput) (string, error) {
+			_ = ctx
+			gotQueuedEventID = in.EventID
+			gotQueuedURL = in.URL
+			gotQueuedSource = in.Source
+			return "draft-1", nil
+		}),
 		publish: func(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
 			_ = ctx
 			_ = mandatory
@@ -117,6 +126,15 @@ func TestHandler_Handle_OK_PublishesDeterministicEventID(t *testing.T) {
 	if gotPublishing.MessageId != eventIDFromURL(url) {
 		t.Fatalf("event_id=%q expected=%q", gotPublishing.MessageId, eventIDFromURL(url))
 	}
+	if gotQueuedEventID != eventIDFromURL(url) {
+		t.Fatalf("queued event_id=%q expected=%q", gotQueuedEventID, eventIDFromURL(url))
+	}
+	if gotQueuedURL != url {
+		t.Fatalf("queued url=%q expected=%q", gotQueuedURL, url)
+	}
+	if gotQueuedSource != "shopee" {
+		t.Fatalf("queued source=%q expected=%q", gotQueuedSource, "shopee")
+	}
 	if gotPublishing.Timestamp.Before(before) || gotPublishing.Timestamp.After(after) {
 		t.Fatalf("timestamp=%s out of range", gotPublishing.Timestamp)
 	}
@@ -137,4 +155,10 @@ func TestHandler_Handle_OK_PublishesDeterministicEventID(t *testing.T) {
 	if env.Data.OutDir != "" {
 		t.Fatalf("env.data.out_dir should be empty, got %q", env.Data.OutDir)
 	}
+}
+
+type queuedDraftWriterFunc func(ctx context.Context, in productdrafts.UpsertQueuedForDraftInput) (string, error)
+
+func (f queuedDraftWriterFunc) UpsertQueuedForDraft(ctx context.Context, in productdrafts.UpsertQueuedForDraftInput) (string, error) {
+	return f(ctx, in)
 }

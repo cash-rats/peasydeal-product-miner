@@ -7,10 +7,11 @@ import (
 
 	cachefx "peasydeal-product-miner/cache/fx"
 	dbfx "peasydeal-product-miner/db/fx"
+	enqueuefx "peasydeal-product-miner/internal/app/amqp/enqueue/fx"
+	productdraftsfx "peasydeal-product-miner/internal/app/amqp/productdrafts/fx"
 	appfx "peasydeal-product-miner/internal/app/fx"
 	healthfx "peasydeal-product-miner/internal/app/health/fx"
 	inngestfx "peasydeal-product-miner/internal/app/inngest/fx"
-	enqueuefx "peasydeal-product-miner/internal/app/amqp/enqueue/fx"
 	routerfx "peasydeal-product-miner/internal/router/fx"
 	serverfx "peasydeal-product-miner/internal/server/fx"
 )
@@ -27,6 +28,7 @@ func main() {
 		routerfx.CoreRouterOptions,
 		serverfx.ServerOptions,
 		healthfx.Module,
+		productdraftsfx.Module,
 		inngestfx.Module,
 		enqueuefx.Module,
 	)

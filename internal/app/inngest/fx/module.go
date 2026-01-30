@@ -4,7 +4,6 @@ import (
 	"peasydeal-product-miner/config"
 	"peasydeal-product-miner/internal/app/inngest"
 	"peasydeal-product-miner/internal/app/inngest/crawl"
-	productdrafts "peasydeal-product-miner/internal/app/inngest/dao"
 	pkginngest "peasydeal-product-miner/internal/pkg/inngest"
 	"peasydeal-product-miner/internal/router"
 	"peasydeal-product-miner/internal/runner"
@@ -24,7 +23,6 @@ var Module = fx.Options(
 		runner.NewRunners,
 		runner.NewRunner,
 		pkginngest.NewInngestClient,
-		productdrafts.NewProductDraftStore,
 		crawl.NewCrawlFunction,
 	),
 	fx.Invoke(registerFunctions),

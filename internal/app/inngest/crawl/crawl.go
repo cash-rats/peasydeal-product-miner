@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"peasydeal-product-miner/config"
-	productdrafts "peasydeal-product-miner/internal/app/inngest/dao"
+	productdrafts "peasydeal-product-miner/internal/app/amqp/productdrafts"
 	"peasydeal-product-miner/internal/pkg/chromedevtools"
 	"peasydeal-product-miner/internal/runner"
 

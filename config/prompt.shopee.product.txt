@@ -9,6 +9,12 @@ Performance rules (important):
 - Do NOT call `fetch`, `XMLHttpRequest`, or any Shopee APIs. Only read already-present DOM/HTML.
 
 Task:
+(-1) Preflight: reload the first existing tab before doing anything else (to recover from stale/"Aw, Snap!" tabs):
+   - Call DevTools `list_pages`.
+   - If there is at least one page, select the FIRST page and reload it:
+     - DevTools `select_page` on the first page
+     - DevTools `navigate_page` with type=`reload`
+   - If there are no pages, skip this preflight.
 0) Open a new tab via DevTools (`new_page`). Record the returned page index; call it `pageIdx`.
 1) Navigate to this Shopee product URL: {{URL}} (do this in the new tab you just opened).
 2) Wait until the page is ready:

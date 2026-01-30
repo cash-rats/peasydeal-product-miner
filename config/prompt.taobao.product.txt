@@ -4,6 +4,13 @@ Goal: extract a minimal but complete product payload (title + price + descriptio
 
 Task:
 
+Preflight (must do before navigation): reload the first existing tab to recover from stale/"Aw, Snap!" tabs:
+- Call DevTools `list_pages`.
+- If there is at least one page, select the FIRST page and reload it:
+  - DevTools `select_page` on the first page
+  - DevTools `navigate_page` with type=`reload`
+- If there are no pages, skip this preflight.
+
 Navigate to this Taobao item URL: {{URL}}
 
 Wait until the page is ready:

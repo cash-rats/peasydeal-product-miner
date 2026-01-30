@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,6 +59,8 @@ func (s *CrawlWorkerRealHandlerSuite) TestConsumeAndPersistRealHandler() {
 	rabbitURL := strings.TrimSpace(os.Getenv("RABBITMQ_URL"))
 	require.NotEmpty(s.T(), rabbitURL)
 
+	log.Printf("~~ rabbitURL %v", rabbitURL)
+
 	conn, err := amqp.Dial(rabbitURL)
 	require.NoError(s.T(), err)
 	ch, err := conn.Channel()
@@ -81,7 +84,7 @@ func (s *CrawlWorkerRealHandlerSuite) TestConsumeAndPersistRealHandler() {
 		EventID:   eventID,
 		TS:        time.Now().UTC(),
 		Data: crawlworker.CrawlRequestedEventData{
-			URL:    "https://shopee.tw/adidas-ADILETTE-22-%E9%81%8B%E5%8B%95%E6%8B%96%E9%9E%8B-%E7%94%B7%E9%9E%8B-%E5%A5%B3%E9%9E%8B-Originals-HQ4670-%E5%AE%98%E6%96%B9%E7%9B%B4%E7%87%9F-i.267479790.18368443782?extraParams=%7B%22display_model_id%22%3A203531125520%2C%22model_selection_logic%22%3A3%7D&sp_atk=b8f3a0d8-b268-48c3-a9ec-de38689f26ba&xptdk=b8f3a0d8-b268-48c3-a9ec-de38689f26ba",
+			URL:    "https://shopee.tw/%E5%8F%B2%E5%8A%AA%E6%AF%94Snoopy-%E8%81%94%E5%90%8D%E6%B4%9E%E6%B4%9E%E9%9E%8B-%E8%8A%B1%E7%94%9F%E7%B6%93%E5%85%B8%E5%85%8B%E9%A7%B1%E6%A0%BC-%E8%BC%95%E4%BE%BF%E9%98%B2%E6%BB%91%E6%B2%99%E7%81%98%E6%B6%BC%E9%9E%8B-208629-i.478274453.25054495889",
 			OutDir: "out",
 		},
 	}

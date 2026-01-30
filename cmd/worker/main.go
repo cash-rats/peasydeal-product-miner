@@ -7,8 +7,8 @@ import (
 
 	dbfx "peasydeal-product-miner/db/fx"
 	crawlworkerfx "peasydeal-product-miner/internal/app/amqp/crawlworker/fx"
+	productdraftsfx "peasydeal-product-miner/internal/app/amqp/productdrafts/fx"
 	appfx "peasydeal-product-miner/internal/app/fx"
-	productdrafts "peasydeal-product-miner/internal/app/inngest/dao"
 	"peasydeal-product-miner/internal/runner"
 	runnerfx "peasydeal-product-miner/internal/runner/fx"
 )
@@ -20,15 +20,13 @@ func main() {
 		}),
 		appfx.CoreAppOptions,
 		dbfx.SQLiteModule,
+		productdraftsfx.Module,
 		fx.Provide(
 			// Runner wiring (same as Inngest domain).
 			runnerfx.NewCodexRunnerConfig,
 			runnerfx.NewGeminiRunnerConfig,
 			runner.NewRunners,
 			runner.NewRunner,
-
-			// Persistence for crawl results.
-			productdrafts.NewProductDraftStore,
 		),
 		runnerfx.AsRunner(runner.NewCodexRunner),
 		runnerfx.AsRunner(runner.NewGeminiRunner),

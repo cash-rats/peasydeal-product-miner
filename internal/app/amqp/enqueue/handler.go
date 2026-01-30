@@ -13,6 +13,7 @@ import (
 
 	"peasydeal-product-miner/config"
 	"peasydeal-product-miner/internal/app/amqp/crawlworker"
+	"peasydeal-product-miner/internal/app/amqp/productdrafts"
 	"peasydeal-product-miner/internal/pkg/render"
 	"peasydeal-product-miner/internal/router"
 
@@ -26,8 +27,13 @@ type Handler struct {
 	cfg     *config.Config
 	channel *amqp.Channel
 	logger  *zap.SugaredLogger
+	store   queuedDraftWriter
 
 	publish func(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
+}
+
+type queuedDraftWriter interface {
+	UpsertQueuedForDraft(ctx context.Context, in productdrafts.UpsertQueuedForDraftInput) (draftID string, err error)
 }
 
 type NewHandlerParams struct {
@@ -36,6 +42,7 @@ type NewHandlerParams struct {
 	Cfg     *config.Config
 	Channel *amqp.Channel `optional:"true"`
 	Logger  *zap.SugaredLogger
+	Store   *productdrafts.ProductDraftStore `optional:"true"`
 }
 
 func NewHandler(p NewHandlerParams) *Handler {
@@ -48,6 +55,7 @@ func NewHandler(p NewHandlerParams) *Handler {
 		cfg:     p.Cfg,
 		channel: p.Channel,
 		logger:  p.Logger,
+		store:   p.Store,
 		publish: publishFn,
 	}
 }
@@ -113,6 +121,19 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	eventID := eventIDFromURL(rawURL)
+
+	if h.store != nil {
+		source := sourceFromHost(host)
+		if _, err := h.store.UpsertQueuedForDraft(r.Context(), productdrafts.UpsertQueuedForDraftInput{
+			EventID:   eventID,
+			CreatedBy: "enqueue",
+			URL:       rawURL,
+			Source:    source,
+		}); err != nil {
+			h.logger.Errorw("enqueue_persist_queued_failed", "event_id", eventID, "url", rawURL, "err", err)
+		}
+	}
+
 	env := crawlworker.CrawlRequestedEnvelope{
 		EventName: "crawler/url.requested",
 		EventID:   eventID,
@@ -169,6 +190,17 @@ func isSupportedCommerceHost(host string) bool {
 		return true
 	}
 	return false
+}
+
+func sourceFromHost(host string) string {
+	if host == "taobao.com" || strings.HasSuffix(host, ".taobao.com") {
+		return "taobao"
+	}
+	// Shopee includes "shopee.com", regional "shopee.<tld>", and subdomains.
+	if strings.HasPrefix(host, "shopee.") || strings.Contains(host, ".shopee.") || host == "shopee.com" || strings.HasSuffix(host, ".shopee.com") {
+		return "shopee"
+	}
+	return ""
 }
 
 var _ router.Handler = (*Handler)(nil)
