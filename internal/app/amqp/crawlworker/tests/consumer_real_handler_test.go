@@ -81,7 +81,7 @@ func (s *CrawlWorkerRealHandlerSuite) TestConsumeAndPersistRealHandler() {
 		EventID:   eventID,
 		TS:        time.Now().UTC(),
 		Data: crawlworker.CrawlRequestedEventData{
-			URL:    "https://s.shopee.tw/8zyuCXG9GV",
+			URL:    "https://shopee.tw/adidas-ADILETTE-22-%E9%81%8B%E5%8B%95%E6%8B%96%E9%9E%8B-%E7%94%B7%E9%9E%8B-%E5%A5%B3%E9%9E%8B-Originals-HQ4670-%E5%AE%98%E6%96%B9%E7%9B%B4%E7%87%9F-i.267479790.18368443782?extraParams=%7B%22display_model_id%22%3A203531125520%2C%22model_selection_logic%22%3A3%7D&sp_atk=b8f3a0d8-b268-48c3-a9ec-de38689f26ba&xptdk=b8f3a0d8-b268-48c3-a9ec-de38689f26ba",
 			OutDir: "out",
 		},
 	}

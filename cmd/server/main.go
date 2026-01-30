@@ -10,6 +10,7 @@ import (
 	appfx "peasydeal-product-miner/internal/app/fx"
 	healthfx "peasydeal-product-miner/internal/app/health/fx"
 	inngestfx "peasydeal-product-miner/internal/app/inngest/fx"
+	enqueuefx "peasydeal-product-miner/internal/app/amqp/enqueue/fx"
 	routerfx "peasydeal-product-miner/internal/router/fx"
 	serverfx "peasydeal-product-miner/internal/server/fx"
 )
@@ -27,6 +28,7 @@ func main() {
 		serverfx.ServerOptions,
 		healthfx.Module,
 		inngestfx.Module,
+		enqueuefx.Module,
 	)
 
 	app.Run()

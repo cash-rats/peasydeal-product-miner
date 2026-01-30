@@ -1,0 +1,140 @@
+package enqueue
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"peasydeal-product-miner/config"
+	"peasydeal-product-miner/internal/app/amqp/crawlworker"
+
+	amqp "github.com/rabbitmq/amqp091-go"
+	"go.uber.org/zap"
+)
+
+func TestHandler_Handle_BadJSON(t *testing.T) {
+	h := &Handler{cfg: &config.Config{}, logger: zap.NewNop().Sugar()}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader("{"))
+	w := httptest.NewRecorder()
+
+	h.Handle(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandler_Handle_MissingURL(t *testing.T) {
+	h := &Handler{cfg: &config.Config{}, logger: zap.NewNop().Sugar()}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader(`{}`))
+	w := httptest.NewRecorder()
+
+	h.Handle(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandler_Handle_UnsupportedDomain(t *testing.T) {
+	h := &Handler{cfg: &config.Config{}, logger: zap.NewNop().Sugar()}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader(`{"url":"https://example.com/x"}`))
+	w := httptest.NewRecorder()
+
+	h.Handle(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandler_Handle_RabbitMQDisabled(t *testing.T) {
+	cfg := &config.Config{}
+	cfg.RabbitMQ.URL = ""
+	h := &Handler{cfg: cfg, logger: zap.NewNop().Sugar()}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader(`{"url":"https://shopee.tw/p/1"}`))
+	w := httptest.NewRecorder()
+
+	h.Handle(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandler_Handle_OK_PublishesDeterministicEventID(t *testing.T) {
+	var gotExchange, gotKey string
+	var gotPublishing amqp.Publishing
+
+	cfg := &config.Config{}
+	cfg.RabbitMQ.URL = "amqp://example"
+	cfg.RabbitMQ.Exchange = "events"
+	cfg.RabbitMQ.RoutingKey = "crawler.url.requested.v1"
+	cfg.RabbitMQ.DeclareTopology = false
+
+	h := &Handler{
+		cfg:    cfg,
+		logger: zap.NewNop().Sugar(),
+		publish: func(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
+			_ = ctx
+			_ = mandatory
+			_ = immediate
+			gotExchange = exchange
+			gotKey = key
+			gotPublishing = msg
+			return nil
+		},
+	}
+
+	url := "https://shopee.tw/p/1"
+	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader(`{"url":"`+url+`"}`))
+	w := httptest.NewRecorder()
+
+	before := time.Now().UTC().Add(-1 * time.Second)
+	h.Handle(w, req)
+	after := time.Now().UTC().Add(1 * time.Second)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	if gotExchange != "events" || gotKey != "crawler.url.requested.v1" {
+		t.Fatalf("publish exchange=%q key=%q", gotExchange, gotKey)
+	}
+	if gotPublishing.ContentType != "application/json" {
+		t.Fatalf("contentType=%q", gotPublishing.ContentType)
+	}
+	if gotPublishing.MessageId == "" {
+		t.Fatalf("missing message id")
+	}
+	if gotPublishing.MessageId != eventIDFromURL(url) {
+		t.Fatalf("event_id=%q expected=%q", gotPublishing.MessageId, eventIDFromURL(url))
+	}
+	if gotPublishing.Timestamp.Before(before) || gotPublishing.Timestamp.After(after) {
+		t.Fatalf("timestamp=%s out of range", gotPublishing.Timestamp)
+	}
+
+	var env crawlworker.CrawlRequestedEnvelope
+	if err := json.Unmarshal(gotPublishing.Body, &env); err != nil {
+		t.Fatalf("unmarshal body: %v", err)
+	}
+	if env.EventID != eventIDFromURL(url) {
+		t.Fatalf("env.event_id=%q expected=%q", env.EventID, eventIDFromURL(url))
+	}
+	if env.EventName != "crawler/url.requested" {
+		t.Fatalf("env.event_name=%q", env.EventName)
+	}
+	if env.Data.URL != url {
+		t.Fatalf("env.data.url=%q", env.Data.URL)
+	}
+	if env.Data.OutDir != "" {
+		t.Fatalf("env.data.out_dir should be empty, got %q", env.Data.OutDir)
+	}
+}
