@@ -18,16 +18,18 @@ import (
 	"peasydeal-product-miner/internal/router"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 type Handler struct {
-	cfg     *config.Config
-	channel *amqp.Channel
-	logger  *zap.SugaredLogger
-	store   queuedDraftWriter
+	cfg           *config.Config
+	channel       *amqp.Channel
+	logger        *zap.SugaredLogger
+	store         queuedDraftWriter
+	sqliteEnabled bool
 
 	publish func(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
 }
@@ -39,10 +41,11 @@ type queuedDraftWriter interface {
 type NewHandlerParams struct {
 	fx.In
 
-	Cfg     *config.Config
-	Channel *amqp.Channel `optional:"true"`
-	Logger  *zap.SugaredLogger
-	Store   *productdrafts.ProductDraftStore `optional:"true"`
+	Cfg      *config.Config
+	Channel  *amqp.Channel `optional:"true"`
+	Logger   *zap.SugaredLogger
+	Store    *productdrafts.ProductDraftStore `optional:"true"`
+	SQLiteDB *sqlx.DB                         `name:"sqlite" optional:"true"`
 }
 
 func NewHandler(p NewHandlerParams) *Handler {
@@ -52,11 +55,12 @@ func NewHandler(p NewHandlerParams) *Handler {
 	}
 
 	return &Handler{
-		cfg:     p.Cfg,
-		channel: p.Channel,
-		logger:  p.Logger,
-		store:   p.Store,
-		publish: publishFn,
+		cfg:           p.Cfg,
+		channel:       p.Channel,
+		logger:        p.Logger,
+		store:         p.Store,
+		sqliteEnabled: p.SQLiteDB != nil,
+		publish:       publishFn,
 	}
 }
 
@@ -71,6 +75,7 @@ type enqueueRequest struct {
 type enqueueResponse struct {
 	OK      bool   `json:"ok"`
 	EventID string `json:"event_id"`
+	ID      string `json:"id,omitempty"`
 }
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -121,16 +126,20 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	eventID := eventIDFromURL(rawURL)
+	draftID := ""
 
-	if h.store != nil {
+	if h.store != nil && h.sqliteEnabled {
 		source := sourceFromHost(host)
-		if _, err := h.store.UpsertQueuedForDraft(r.Context(), productdrafts.UpsertQueuedForDraftInput{
+		id, err := h.store.UpsertQueuedForDraft(r.Context(), productdrafts.UpsertQueuedForDraftInput{
 			EventID:   eventID,
 			CreatedBy: "enqueue",
 			URL:       rawURL,
 			Source:    source,
-		}); err != nil {
+		})
+		if err != nil {
 			h.logger.Errorw("enqueue_persist_queued_failed", "event_id", eventID, "url", rawURL, "err", err)
+		} else {
+			draftID = id
 		}
 	}
 
@@ -177,7 +186,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.logger.Infow("enqueue_published", "exchange", ex, "routing_key", routingKey, "event_id", eventID, "url", rawURL)
-	render.ChiJSON(w, http.StatusOK, enqueueResponse{OK: true, EventID: eventID})
+	render.ChiJSON(w, http.StatusOK, enqueueResponse{OK: true, EventID: eventID, ID: draftID})
 }
 
 func eventIDFromURL(u string) string {

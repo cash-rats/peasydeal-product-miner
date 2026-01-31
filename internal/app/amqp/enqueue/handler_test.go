@@ -75,6 +75,11 @@ func TestHandler_Handle_OK_PublishesDeterministicEventID(t *testing.T) {
 	var gotExchange, gotKey string
 	var gotPublishing amqp.Publishing
 	var gotQueuedEventID, gotQueuedURL, gotQueuedSource string
+	var gotResp struct {
+		OK      bool   `json:"ok"`
+		EventID string `json:"event_id"`
+		ID      string `json:"id"`
+	}
 
 	cfg := &config.Config{}
 	cfg.RabbitMQ.URL = "amqp://example"
@@ -83,8 +88,9 @@ func TestHandler_Handle_OK_PublishesDeterministicEventID(t *testing.T) {
 	cfg.RabbitMQ.DeclareTopology = false
 
 	h := &Handler{
-		cfg:    cfg,
-		logger: zap.NewNop().Sugar(),
+		cfg:           cfg,
+		logger:        zap.NewNop().Sugar(),
+		sqliteEnabled: true,
 		store: queuedDraftWriterFunc(func(ctx context.Context, in productdrafts.UpsertQueuedForDraftInput) (string, error) {
 			_ = ctx
 			gotQueuedEventID = in.EventID
@@ -113,6 +119,18 @@ func TestHandler_Handle_OK_PublishesDeterministicEventID(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &gotResp); err != nil {
+		t.Fatalf("unmarshal response: %v body=%s", err, w.Body.String())
+	}
+	if !gotResp.OK {
+		t.Fatalf("response ok=false body=%s", w.Body.String())
+	}
+	if gotResp.EventID != eventIDFromURL(url) {
+		t.Fatalf("response event_id=%q expected=%q", gotResp.EventID, eventIDFromURL(url))
+	}
+	if gotResp.ID != "draft-1" {
+		t.Fatalf("response id=%q expected=%q", gotResp.ID, "draft-1")
 	}
 	if gotExchange != "events" || gotKey != "crawler.url.requested.v1" {
 		t.Fatalf("publish exchange=%q key=%q", gotExchange, gotKey)

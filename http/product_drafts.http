@@ -1,9 +1,19 @@
 @baseUrl = http://localhost:3012
 @draftId = c0eec9fc-8519-4598-a2b5-73b20917a4ec
+@urlToCrawl = https://shopee.tw/p/1
 
 ### Health (sanity check)
 GET {{baseUrl}}/health
 Accept: application/json
+
+### Enqueue crawl job (returns `event_id` and optionally `id` when sqlite is enabled)
+POST {{baseUrl}}/v1/crawl/enqueue
+Content-Type: application/json
+Accept: application/json
+
+{
+  "url": "https://shopee.tw/%E3%80%90%E5%8E%9F%E5%BB%A0%E3%80%91%E7%83%98%E7%BD%A9NA9L-NA98-NA9B-NA0E-NA9A-NA0G-NA9G-NA97%E6%8D%B2%E9%AB%AE%E5%AE%9A%E5%9E%8B-%E5%9C%8B%E9%9A%9B%E7%89%8C-i.1881960.24062200209"
+}
 
 ### Get product draft by id
 # Note: `draft_payload` is parsed and returned as `draft`.
