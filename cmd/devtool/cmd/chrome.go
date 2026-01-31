@@ -61,6 +61,8 @@ func newChromeCmd() *cobra.Command {
 					"--remote-debugging-host="+addr,
 					"--remote-debugging-port="+port,
 					"--user-data-dir="+profileDir,
+					"--use-gl=angle",
+					"--use-angle=swiftshader",
 				)
 				c.Stdout = io.Discard
 				c.Stderr = io.Discard
