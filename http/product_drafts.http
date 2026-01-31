@@ -1,0 +1,15 @@
+@baseUrl = http://localhost:3012
+@draftId = c0eec9fc-8519-4598-a2b5-73b20917a4ec
+
+### Health (sanity check)
+GET {{baseUrl}}/health
+Accept: application/json
+
+### Get product draft by id
+# Note: `draft_payload` is parsed and returned as `draft`.
+GET {{baseUrl}}/v1/product-drafts/{{draftId}}
+Accept: application/json
+
+### Get product draft (example 404)
+GET {{baseUrl}}/v1/product-drafts/does_not_exist
+Accept: application/json
