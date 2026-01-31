@@ -2,6 +2,23 @@ You are controlling an already-running Google Chrome via Chrome DevTools.
 
 Goal: extract a minimal but complete product payload (title + price + description + images) from a Taobao item page as fast as possible.
 
+Chrome crash recovery (Aw, Snap! / renderer crash) — MUST follow when using Chrome DevTools MCP:
+Goal: recover from Chrome "Aw, Snap!" / renderer crash using Chrome DevTools MCP.
+Steps:
+1) List all open pages/tabs (targets).
+2) Select the target whose URL matches the intended site (or the active tab).
+3) Run ONE evaluate_script in that tab to return:
+   - href: location.href
+   - title: document.title
+   - ready: document.readyState
+4) If href starts with "chrome-error://" OR title contains "Aw, Snap":
+   a) Try Page.reload(ignoreCache=true) (DevTools: navigate_page type=reload ignoreCache=true).
+   b) After reload, evaluate again.
+   c) If still error page, Page.navigate to the desired URL (use stored last_good_url).
+5) If reload/navigate fails or the tab becomes unresponsive:
+   - open a new tab, navigate to last_good_url, then close the broken tab.
+6) Return status ok / needs_manual / browser_dead (if cannot talk to CDP).
+
 Task:
 
 Preflight (must do before navigation): reload the first existing tab to recover from stale/"Aw, Snap!" tabs:
