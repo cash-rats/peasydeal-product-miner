@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"time"
 
+	"peasydeal-product-miner/config"
 	"peasydeal-product-miner/internal/router"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -19,6 +21,7 @@ var CoreRouterOptions = fx.Options(
 type muxParams struct {
 	fx.In
 
+	Cfg      *config.Config
 	Logger   *zap.SugaredLogger
 	Handlers []router.Handler `group:"handlers"`
 }
@@ -26,10 +29,34 @@ type muxParams struct {
 func NewMux(p muxParams) *chi.Mux {
 	r := chi.NewRouter()
 
+	// Dev-only CORS for local frontend (e.g. Vite on :5173).
+	corsEnabled := false
+	if p.Cfg != nil && (p.Cfg.ENV == config.Dev || p.Cfg.ENV == config.Test) {
+		corsEnabled = true
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins: []string{
+				"http://localhost:5173",
+				"http://127.0.0.1:5173",
+			},
+			AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+			ExposedHeaders:   []string{"Link"},
+			AllowCredentials: true,
+			MaxAge:           300,
+		}))
+	}
+
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(zapRequestLogger(p.Logger))
+
+	if corsEnabled {
+		// Ensure OPTIONS preflight requests get a successful response.
+		r.Options("/*", func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		})
+	}
 
 	for _, h := range p.Handlers {
 		h.RegisterRoute(r)

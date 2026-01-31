@@ -61,7 +61,7 @@ func NewHandler(p NewHandlerParams) *Handler {
 }
 
 func (h *Handler) RegisterRoute(r *chi.Mux) {
-	r.Post("/api/crawl/enqueue", h.Handle)
+	r.Post("/v1/crawl/enqueue", h.Handle)
 }
 
 type enqueueRequest struct {
@@ -164,7 +164,14 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		MessageId:    eventID,
 		Body:         body,
 	}); err != nil {
-		h.logger.Errorw("enqueue_publish_failed", "exchange", ex, "routing_key", routingKey, "event_id", eventID, "url", rawURL, "err", err)
+		h.logger.Errorw(
+			"enqueue_publish_failed",
+			"exchange", ex,
+			"routing_key", routingKey,
+			"event_id", eventID,
+			"url", rawURL,
+			"err", err,
+		)
 		render.ChiErr(w, http.StatusBadGateway, "failed to publish message")
 		return
 	}

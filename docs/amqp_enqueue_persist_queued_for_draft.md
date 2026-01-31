@@ -2,7 +2,7 @@
 
 ## Goal
 
-When a client calls `POST /api/crawl/enqueue`, we want to **persist a draft row in SQLite/Turso** before publishing the crawl request to RabbitMQ. The persisted row acts as the “job record” and starts with status `QUEUED_FOR_DRAFT`.
+When a client calls `POST /v1/crawl/enqueue`, we want to **persist a draft row in SQLite/Turso** before publishing the crawl request to RabbitMQ. The persisted row acts as the “job record” and starts with status `QUEUED_FOR_DRAFT`.
 
 Separately, the `ProductDraftStore` code previously lived under `internal/app/inngest/dao/` even though the repo is moving away from `inngest/`. This change relocates that store into the AMQP domain.
 
@@ -47,4 +47,3 @@ Wiring updates:
 - The schema already supports `QUEUED_FOR_DRAFT` and `event_id`:
   - `db/migrations/20260120055907_product_drafts.sql`
   - `db/migrations/20260127053509_product_drafts_event_id.sql`
-

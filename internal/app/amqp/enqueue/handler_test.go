@@ -20,7 +20,7 @@ import (
 func TestHandler_Handle_BadJSON(t *testing.T) {
 	h := &Handler{cfg: &config.Config{}, logger: zap.NewNop().Sugar()}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader("{"))
+	req := httptest.NewRequest(http.MethodPost, "/v1/crawl/enqueue", strings.NewReader("{"))
 	w := httptest.NewRecorder()
 
 	h.Handle(w, req)
@@ -33,7 +33,7 @@ func TestHandler_Handle_BadJSON(t *testing.T) {
 func TestHandler_Handle_MissingURL(t *testing.T) {
 	h := &Handler{cfg: &config.Config{}, logger: zap.NewNop().Sugar()}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/v1/crawl/enqueue", strings.NewReader(`{}`))
 	w := httptest.NewRecorder()
 
 	h.Handle(w, req)
@@ -46,7 +46,7 @@ func TestHandler_Handle_MissingURL(t *testing.T) {
 func TestHandler_Handle_UnsupportedDomain(t *testing.T) {
 	h := &Handler{cfg: &config.Config{}, logger: zap.NewNop().Sugar()}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader(`{"url":"https://example.com/x"}`))
+	req := httptest.NewRequest(http.MethodPost, "/v1/crawl/enqueue", strings.NewReader(`{"url":"https://example.com/x"}`))
 	w := httptest.NewRecorder()
 
 	h.Handle(w, req)
@@ -61,7 +61,7 @@ func TestHandler_Handle_RabbitMQDisabled(t *testing.T) {
 	cfg.RabbitMQ.URL = ""
 	h := &Handler{cfg: cfg, logger: zap.NewNop().Sugar()}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader(`{"url":"https://shopee.tw/p/1"}`))
+	req := httptest.NewRequest(http.MethodPost, "/v1/crawl/enqueue", strings.NewReader(`{"url":"https://shopee.tw/p/1"}`))
 	w := httptest.NewRecorder()
 
 	h.Handle(w, req)
@@ -104,7 +104,7 @@ func TestHandler_Handle_OK_PublishesDeterministicEventID(t *testing.T) {
 	}
 
 	url := "https://shopee.tw/p/1"
-	req := httptest.NewRequest(http.MethodPost, "/api/crawl/enqueue", strings.NewReader(`{"url":"`+url+`"}`))
+	req := httptest.NewRequest(http.MethodPost, "/v1/crawl/enqueue", strings.NewReader(`{"url":"`+url+`"}`))
 	w := httptest.NewRecorder()
 
 	before := time.Now().UTC().Add(-1 * time.Second)

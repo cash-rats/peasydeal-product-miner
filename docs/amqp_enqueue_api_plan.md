@@ -17,7 +17,7 @@ High. The repo already has:
 
 ## Proposed Endpoint
 
-### `POST /api/crawl/enqueue`
+### `POST /v1/crawl/enqueue`
 
 **Request JSON**
 ```json
@@ -60,7 +60,7 @@ High. The repo already has:
 ### New domain module
 - `internal/app/amqp/enqueue/handler.go`
   - Implements `internal/router.Handler`:
-    - `RegisterRoute(r *chi.Mux)` registers `POST /api/crawl/enqueue`
+    - `RegisterRoute(r *chi.Mux)` registers `POST /v1/crawl/enqueue`
     - `Handle(w, r)` publishes to RabbitMQ
   - Dependencies via `fx.In`:
     - `*config.Config`
@@ -112,7 +112,7 @@ Minimal options:
 ## Rollout Steps
 
 1) Implement handler + module + server wiring.
-2) Run server locally and hit `POST /api/crawl/enqueue`.
+2) Run server locally and hit `POST /v1/crawl/enqueue`.
 3) Confirm worker consumes and persists (`crawlworker_finished` logs; SQLite draft written).
 4) Add docs to `README.md` (endpoint usage + required env vars; none required by default except RabbitMQ when enabled).
 
