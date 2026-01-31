@@ -6,6 +6,13 @@ tool ?= codex
 # URL to crawl for dev-once (required).
 url ?=
 
+# VNC SSH tunnel defaults (optional).
+VNC_SSH_KEY ?= ~/.ssh/id_rsa
+VNC_SSH_PORT ?= 2230
+VNC_SSH_HOST ?= peasydeal@statichome4.myfbmanage.com
+VNC_LOCAL_PORT ?= 5901
+VNC_REMOTE_PORT ?= 5901
+
 # Load `.env` for developer convenience (Docker Compose already reads it).
 ifneq (,$(wildcard .env))
 include .env
@@ -29,6 +36,7 @@ help:
 	"  make docker-once tool=codex|gemini url=<product_url>  Crawl one URL in Docker (parity check)" \
 	"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
 	"  make docker-login tool=codex|gemini  Authorize host tool for the Docker runner" \
+	"  make vnc-tunnel                Open SSH tunnel for VNC (localhost:5901 -> remote:5901)" \
 	"  make ghcr-login               Login to GHCR using GHCR_USER and GHCR_TOKEN from .env" \
 	"  make deploy env=<name> build=1        Deploy to remote server via scripts/deploy.sh" \
 	"  make goose-create name=<migration_name>  Create a goose SQL migration in db/migrations"
@@ -108,6 +116,11 @@ docker-login:
 		gemini) $(MAKE) docker-gemini-login ;; \
 		*) echo "Error: unknown tool '$(tool)' (expected codex or gemini)"; exit 2 ;; \
 	esac
+
+.PHONY: vnc-tunnel
+vnc-tunnel:
+	@ssh -i "$(VNC_SSH_KEY)" -p "$(VNC_SSH_PORT)" -N -f -L "$(VNC_LOCAL_PORT):localhost:$(VNC_REMOTE_PORT)" "$(VNC_SSH_HOST)"
+	@echo "VNC tunnel up: localhost:$(VNC_LOCAL_PORT) -> $(VNC_SSH_HOST):$(VNC_REMOTE_PORT)"
 
 .PHONY: docker-codex-login
 docker-codex-login:
