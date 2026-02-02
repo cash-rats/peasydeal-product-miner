@@ -33,6 +33,7 @@ func NewMux(p muxParams) *chi.Mux {
 	corsEnabled := false
 	allowedOrigins := []string{
 		"https://peasydeal-admin-console.vercel.app",
+		"https://admin.peasydeal.com/",
 	}
 	if p.Cfg != nil {
 		switch p.Cfg.ENV {

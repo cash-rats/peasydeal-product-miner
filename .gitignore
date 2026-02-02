@@ -40,3 +40,5 @@ __pycache__/
 
 # Supabase
 supabase/*
+.vercel
+.env*.local
