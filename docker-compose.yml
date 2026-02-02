@@ -23,6 +23,13 @@ services:
       - CODEX_MODEL=${CODEX_MODEL:-gpt-5.2}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
 
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/}
+      - RABBITMQ_EXCHANGE=${RABBITMQ_EXCHANGE:-events}
+      - RABBITMQ_QUEUE=${RABBITMQ_QUEUE:-crawler.url.requested.v1}
+      - RABBITMQ_ROUTING_KEY=${RABBITMQ_ROUTING_KEY:-crawler.url.requested.v1}
+      - RABBITMQ_PREFETCH=${RABBITMQ_PREFETCH:-1}
+      - RABBITMQ_DECLARE_TOPOLOGY=${RABBITMQ_DECLARE_TOPOLOGY:-true}
+
       - INNGEST_DEV=${INNGEST_DEV:-}
       - INNGEST_APP_ID=${INNGEST_APP_ID:-peasydeal-product-miner}
       - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY:-}
