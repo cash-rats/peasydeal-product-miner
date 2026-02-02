@@ -29,15 +29,26 @@ type muxParams struct {
 func NewMux(p muxParams) *chi.Mux {
 	r := chi.NewRouter()
 
-	// Dev-only CORS for local frontend (e.g. Vite on :5173).
+	// CORS for admin console + local dev.
 	corsEnabled := false
-	if p.Cfg != nil && (p.Cfg.ENV == config.Dev || p.Cfg.ENV == config.Test) {
-		corsEnabled = true
-		r.Use(cors.Handler(cors.Options{
-			AllowedOrigins: []string{
+	allowedOrigins := []string{
+		"https://peasydeal-admin-console.vercel.app",
+	}
+	if p.Cfg != nil {
+		switch p.Cfg.ENV {
+		case config.Dev, config.Test:
+			allowedOrigins = append(allowedOrigins,
 				"http://localhost:5173",
 				"http://127.0.0.1:5173",
-			},
+			)
+			corsEnabled = true
+		case config.Production, config.Preview:
+			corsEnabled = true
+		}
+	}
+	if corsEnabled {
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins:   allowedOrigins,
 			AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 			ExposedHeaders:   []string{"Link"},
