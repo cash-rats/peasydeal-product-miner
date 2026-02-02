@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -110,7 +111,9 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.cfg == nil || h.cfg.RabbitMQ.URL == "" || h.publish == nil {
+	log.Printf("~~ ** 1 %v", h.cfg.RabbitMQ.URL)
+
+	if h.cfg.RabbitMQ.URL == "" || h.publish == nil {
 		render.ChiErr(w, http.StatusServiceUnavailable, "rabbitmq disabled")
 		return
 	}
