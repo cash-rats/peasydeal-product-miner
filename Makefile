@@ -23,7 +23,6 @@ endif
 help:
 	@printf "%s\n" \
 	"Targets:" \
-	"  make start                     Start long-lived HTTP server (/health)" \
 	"  make worker                    Start RabbitMQ crawl worker (AMQP consumer)" \
 	"  make dev-chrome                 Start Chrome with DevTools enabled" \
 	"  make dev-doctor                 Check DevTools is reachable on localhost" \
@@ -41,22 +40,9 @@ help:
 	"  make deploy env=<name> build=1        Deploy to remote server via scripts/deploy.sh" \
 	"  make goose-create name=<migration_name>  Create a goose SQL migration in db/migrations"
 
-.PHONY: start
-start:
-	go run ./cmd/server
-
 .PHONY: worker
 worker:
 	go run ./cmd/worker
-
-## start/inngest: start the inngest dev server
-.PHONY: start/inngest
-INNGEST_SERVE_HOST ?= localhost:3012
-start/inngest:
-	npx inngest-cli@latest dev \
-		--no-discovery \
-		--poll-interval 10000 \
-		-u http://$(INNGEST_SERVE_HOST)$(INNGEST_SERVE_PATH)
 
 .PHONY: dev-chrome
 dev-chrome:
