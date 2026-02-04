@@ -175,13 +175,22 @@ func draftStatusAndError(result runner.Result) (status string, errorText string)
 	raw, _ := result["status"].(string)
 
 	switch raw {
-	case "ok", "needs_manual":
+	case "ok":
 		return "READY_FOR_REVIEW", ""
+	case "needs_manual":
+		return "FAILED", errorFromNeedsManual(result)
 	case "error":
 		return "FAILED", errorFromResult(result)
 	default:
 		return "FAILED", errorFromResult(result)
 	}
+}
+
+func errorFromNeedsManual(result runner.Result) string {
+	if s, ok := result["notes"].(string); ok && s != "" {
+		return s
+	}
+	return "crawler returned status=needs_manual"
 }
 
 func errorFromResult(result runner.Result) string {

@@ -84,7 +84,7 @@ func (s *CrawlWorkerRealHandlerSuite) TestConsumeAndPersistRealHandler() {
 		EventID:   eventID,
 		TS:        time.Now().UTC(),
 		Data: crawlworker.CrawlRequestedEventData{
-			URL:    "https://shopee.tw/%E3%80%90%F0%9F%94%A5%E5%81%A5%E8%BA%AB%E7%94%B7%E5%BF%85%E5%82%99%F0%9F%94%A5%E3%80%91%E7%94%B7%E7%94%9F%E8%83%8C%E5%BF%83-%E7%94%B7%E8%83%8C%E5%BF%83-%E7%94%B7%E5%85%A7%E8%A1%A3-%E9%81%8B%E5%8B%95%E8%83%8C%E5%BF%83%E7%94%B7-%E5%90%8A%E5%98%8E-%E5%81%A5%E8%BA%AB%E8%83%8C%E5%BF%83-%E8%83%8C%E5%BF%83%E7%94%B7-%E9%81%8B%E5%8B%95%E8%83%8C%E5%BF%83-%E5%81%A5%E8%BA%AB%E8%83%8C%E5%BF%83%E7%94%B7%E7%94%9F-i.35059358.23154717830?extraParams=%7B%22display_model_id%22%3A109004334318%7D",
+			URL:    "https://shopee.tw/-%E6%82%A0%E8%A5%BF%E5%B0%87-%E6%97%A5%E6%9C%AC-NISSIN-%E6%97%A5%E6%B8%85-%E6%9D%AF%E9%BA%B5-%E6%B5%B7%E9%AE%AE%E6%9D%AF%E9%BA%B5-cup-noodle-%E6%B3%A1%E9%BA%B5-%E8%BE%A3%E9%86%AC%E6%B2%B9%E5%91%B3-%E8%BE%A3%E7%95%AA%E8%8C%84%E5%91%B3-3%E7%A8%AE%E5%91%B3%E5%99%8C-%E6%93%94%E6%93%94%E9%BA%B5-i.2293056.45953187011?extraParams=%7B%22display_model_id%22%3A435405193306%2C%22model_selection_logic%22%3A3%7D&sp_atk=d56bf2c0-39ab-41aa-b422-95ff9a766d22&xptdk=d56bf2c0-39ab-41aa-b422-95ff9a766d22",
 			OutDir: "out",
 		},
 	}
