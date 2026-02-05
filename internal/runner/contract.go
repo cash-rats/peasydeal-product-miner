@@ -26,6 +26,13 @@ type CrawlOut struct {
 	Currency    string `json:"currency,omitempty" validate:"required_if=Status ok"`
 	Price       any    `json:"price,omitempty" validate:"required_if=Status ok,price"`
 	Images      []any  `json:"images,omitempty"`
+	Variations  []Variation `json:"variations,omitempty" validate:"omitempty,dive"`
+}
+
+type Variation struct {
+	Title    string `json:"title" validate:"required"`
+	Position int    `json:"position" validate:"min=0"`
+	Image    string `json:"image,omitempty"`
 }
 
 func validateCrawlOut(out CrawlOut) error {

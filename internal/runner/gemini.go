@@ -260,7 +260,15 @@ Convert the TEXT below into EXACTLY ONE valid JSON object matching this contract
   "title": "string",
   "description": "string",
   "currency": "string (e.g. TWD)",
-  "price": "number or numeric string"
+  "price": "number or numeric string",
+  "images": ["string"] (optional; empty array allowed),
+  "variations": [
+    {
+      "title": "string",
+      "position": "int",
+      "image": "string (optional)"
+    }
+  ]
 }
 
 Rules:
