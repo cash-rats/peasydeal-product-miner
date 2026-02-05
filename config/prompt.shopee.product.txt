@@ -107,6 +107,7 @@ Image extraction (overlay thumbnails):
 - Fast path (preferred): use the OVERLAY as the source of truth. Do not try to “scroll the thumbnail strip” on the main page.
 - Open the product image viewer overlay by clicking the main product image (DevTools `click` on the main image area).
   - Expected behavior: a modal appears with `role="dialog"` and page scrolling becomes disabled (`body` overflow becomes `hidden`).
+  - Stale Element Recovery: If `click` fails or times out, take a fresh `take_snapshot` to get updated UIDs, or use `evaluate_script` to trigger `element.click()` via JavaScript.
 - In ONE `evaluate_script`, extract ALL product images from the overlay dialog DOM (including off-screen/hidden thumbnails):
   - Locate the modal root: `const dialog = document.querySelector('[role=\"dialog\"]')` (fallback: `[aria-modal=\"true\"]` / `.shopee-modal`).
   - Collect candidate thumbnail images from within the dialog: `dialog.querySelectorAll('img')`.
@@ -180,11 +181,11 @@ Steps (minimal, deterministic):
    - Use its parent as a scope; collect `button` nodes with non-empty text.
 3) For each variation button (in DOM order):
    - Hover the button (DevTools `hover` on the element).
+   - If `hover` does not update the main image, use `click()` on the button (DevTools `click` or JS `click()`).
    - Immediately read `mainImage.currentSrc || mainImage.src || mainImage.getAttribute('data-src')`.
    - Record `{ title: buttonText, position: index, image: mainImageSrc }`.
-4) If hovering does not update the image:
-   - Try `mouseenter`/`mouseover` dispatch or fallback to `click()` on the button.
-   - If still unchanged, report that variation image mapping is unavailable for this page.
+   - Note: It is normal for different variations to share the same image (sellers often reuse them); record whatever the UI displays.
+4) If the image still does not change after multiple attempts, report that variation image mapping is unavailable for this page.
 
 Implementation notes:
 - Prefer DevTools `hover` tool for real hover behavior (works when JS relies on pointer events).
