@@ -84,10 +84,11 @@ if [[ "$BUILD" == "1" ]]; then
 fi
 
 echo "Deploying to ${PROD_USER}@${PROD_HOST}:${PROD_DIR}"
-ssh "${ssh_opts[@]}" "${PROD_USER}@${PROD_HOST}" "mkdir -p '$PROD_DIR'"
+ssh "${ssh_opts[@]}" "${PROD_USER}@${PROD_HOST}" "mkdir -p '$PROD_DIR' '$PROD_DIR/config'"
 
 scp "${scp_opts[@]}" "$COMPOSE_FILE" "${PROD_USER}@${PROD_HOST}:${PROD_DIR}/docker-compose.yml"
 scp "${scp_opts[@]}" "$PROD_ENV" "${PROD_USER}@${PROD_HOST}:${PROD_DIR}/.env"
+scp -r "${scp_opts[@]}" "${ROOT_DIR}/config/." "${PROD_USER}@${PROD_HOST}:${PROD_DIR}/config"
 
 ssh "${ssh_opts[@]}" "${PROD_USER}@${PROD_HOST}" \
   "cd '$PROD_DIR' && \

@@ -72,18 +72,26 @@ func (r *CodexRunner) Run(url string, prompt string) (string, error) {
 		return "", err
 	}
 
-	extracted, err := extractFirstJSONObject(modelText)
-	if err == nil {
+	if _, err := extractJSONObjectWithStatus(modelText); err == nil {
 		r.logCodexOutput(url, modelText)
-		return extracted, nil
+		return modelText, nil
 	}
 
-	r.logger.Infow(
-		"runner_codex_repair_attempt",
-		"tool", "codex",
-		"url", url,
-		"err", err.Error(),
-	)
+	if _, err := extractFirstJSONObject(modelText); err == nil {
+		r.logger.Infow(
+			"runner_codex_repair_attempt",
+			"tool", "codex",
+			"url", url,
+			"err", "missing status",
+		)
+	} else {
+		r.logger.Infow(
+			"runner_codex_repair_attempt",
+			"tool", "codex",
+			"url", url,
+			"err", err.Error(),
+		)
+	}
 	repairPrompt := buildCodexRepairPrompt(url, modelText)
 
 	repairedText, rerr := r.runModelText(url, repairPrompt)
@@ -94,18 +102,17 @@ func (r *CodexRunner) Run(url string, prompt string) (string, error) {
 			"url", url,
 			"err", rerr.Error(),
 		)
-		return "", fmt.Errorf("codex returned non-JSON output: %w", err)
+		return "", fmt.Errorf("codex returned non-JSON output: %w", rerr)
 	}
 
-	repairedExtracted, perr := extractFirstJSONObject(repairedText)
-	if perr != nil {
+	if _, perr := extractJSONObjectWithStatus(repairedText); perr != nil {
 		r.logger.Infow(
 			"runner_codex_repair_failed",
 			"tool", "codex",
 			"url", url,
 			"err", perr.Error(),
 		)
-		return "", fmt.Errorf("codex returned non-JSON output: %w", err)
+		return "", fmt.Errorf("codex returned non-JSON output: %w", perr)
 	}
 
 	r.logger.Infow(
@@ -114,7 +121,7 @@ func (r *CodexRunner) Run(url string, prompt string) (string, error) {
 		"url", url,
 	)
 	r.logCodexOutput(url, repairedText)
-	return repairedExtracted, nil
+	return repairedText, nil
 }
 
 func (r *CodexRunner) runModelText(url string, prompt string) (string, error) {
