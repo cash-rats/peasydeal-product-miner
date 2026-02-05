@@ -126,6 +126,7 @@ Output contract (JSON ONLY, no markdown, no extra keys):
 "error": "string (required when status=error)",
 "title": "string",
 "price": "number or numeric string",
+"variations": "string (optional; may be empty string if hard to extract)",
 "description": "string (optional)",
 "images": ["string"],
 "description_images": ["string"],
@@ -140,7 +141,7 @@ title and price are REQUIRED.
 
 images[] MUST be included (empty array allowed if none found).
 
-description and description_images are optional.
+variations, description, and description_images are optional.
 
 If status="needs_manual":
 

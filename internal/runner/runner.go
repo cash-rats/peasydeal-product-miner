@@ -182,7 +182,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 		return outPath, res, err
 	}
 
-	res, err := parseResult(tr.Name(), raw)
+	res, usedFallback, err := parseResult(tr.Name(), raw)
 	if err != nil {
 		res = errorResult(opts.URL, err)
 		if authErr != nil {
@@ -193,6 +193,13 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 			return "", res, werr
 		}
 		return outPath, res, err
+	}
+	if usedFallback {
+		r.logger.Debugw(
+			"runner_parse_result_fallback",
+			"tool", tr.Name(),
+			"url", opts.URL,
+		)
 	}
 
 	res.setdefault("url", opts.URL)
@@ -231,15 +238,24 @@ func loadPrompt(promptPath string, url string) (string, error) {
 	return strings.ReplaceAll(string(b), "{{URL}}", url), nil
 }
 
-func parseResult(toolName string, raw string) (Result, error) {
-	extracted, err := extractFirstJSONObject(raw)
+func parseResult(toolName string, raw string) (Result, bool, error) {
+	extracted, err := extractJSONObjectWithStatus(raw)
 	if err != nil {
-		if strings.TrimSpace(toolName) == "" {
-			toolName = "tool"
+		extracted, err = extractFirstJSONObject(raw)
+		if err != nil {
+			if strings.TrimSpace(toolName) == "" {
+				toolName = "tool"
+			}
+			return nil, false, fmt.Errorf("invalid JSON from %s: %w", toolName, err)
 		}
-		return nil, fmt.Errorf("invalid JSON from %s: %w", toolName, err)
+		res, derr := parseResultDecoded(toolName, extracted)
+		return res, true, derr
 	}
+	res, derr := parseResultDecoded(toolName, extracted)
+	return res, false, derr
+}
 
+func parseResultDecoded(toolName string, extracted string) (Result, error) {
 	dec := json.NewDecoder(strings.NewReader(extracted))
 	dec.UseNumber()
 
@@ -272,6 +288,7 @@ func validateContract(r Result) error {
 	if err := dec.Decode(&out); err != nil {
 		return fmt.Errorf("invalid contract JSON: %w", err)
 	}
+	out.Status = strings.TrimSpace(out.Status)
 	if !allowedStatus[out.Status] {
 		return fmt.Errorf("missing/invalid required key: status")
 	}

@@ -48,6 +48,49 @@ func extractFirstJSONObject(raw string) (string, error) {
 	return "", fmt.Errorf("no valid JSON object found")
 }
 
+func extractJSONObjectWithStatus(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("empty response")
+	}
+
+	// Handle markdown fences like ```json ... ```
+	if strings.HasPrefix(raw, "```") {
+		if fenced := extractFirstMarkdownFence(raw); fenced != "" {
+			raw = strings.TrimSpace(fenced)
+		}
+	}
+
+	for i := 0; i < len(raw); i++ {
+		if raw[i] != '{' {
+			continue
+		}
+
+		dec := json.NewDecoder(strings.NewReader(raw[i:]))
+		dec.UseNumber()
+
+		var v any
+		if err := dec.Decode(&v); err != nil {
+			continue
+		}
+		obj, ok := v.(map[string]any)
+		if !ok {
+			continue
+		}
+		if status, ok := obj["status"].(string); !ok || strings.TrimSpace(status) == "" {
+			continue
+		}
+
+		b, err := json.Marshal(obj)
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}
+
+	return "", fmt.Errorf("no valid JSON object with status found")
+}
+
 func extractFirstMarkdownFence(s string) string {
 	const fence = "```"
 	start := strings.Index(s, fence)

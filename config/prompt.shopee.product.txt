@@ -36,10 +36,11 @@ Task:
 1) Navigate to this Shopee product URL: {{URL}} (do this in the new tab you just opened).
 2) Wait until the page is ready:
    - document.readyState === "complete", AND
-   - EITHER a title is present (meta/h1) OR a price-like string is present in the page text OR JSON-LD Product is present.
+   - EITHER JSON-LD Product is present (script[type="application/ld+json"] containing "@type":"Product") OR a price string (e.g. starting with $) is visible in the body.
+   - Note: Shopee TW is an SPA and may inject JSON-LD several seconds after readyState is complete. If not found initially, wait up to 3-5 seconds.
 3) Extract data in ONE evaluate_script (keep it simple and fast):
    - Detect blocking walls early:
-     - If you see login / verification / CAPTCHA (e.g., "登入", "登錄", "驗證", "captcha", "robot", slider verification),
+     - If you see login / verification / CAPTCHA (e.g., "登入", "登錄", "驗證", "captcha", "robot", slider verification) AND the main product content (title/price) is NOT visible,
        return status="needs_manual" with notes describing what you saw.
    - Title (prefer stable sources, in this order):
      1) `meta[property="og:title"]`
@@ -49,7 +50,7 @@ Task:
    - Description (prefer stable sources, in this order):
      1) JSON-LD `script[type="application/ld+json"]` where `@type` includes `"Product"` -> `description`
      2) `meta[property="og:description"]` (fallback `meta[name="description"]`)
-     3) A targeted DOM node for product description (only if obvious; do not crawl the whole DOM)
+     3) A targeted DOM node for product description (e.g. `[class*="product-detail"]`, `[class*="description"]`)
      - Clean description: trim; keep newlines; collapse excessive whitespace.
    - Price (prefer stable sources, in this order):
      1) JSON-LD `script[type="application/ld+json"]` where `@type` includes `"Product"` -> `offers`
@@ -57,11 +58,11 @@ Task:
         - Prefer: `offers.price` (if present)
         - Fallback: `offers.lowPrice` / `offers.highPrice` (use min when range)
         - Normalize: strip currency symbols/commas/spaces; keep digits + optional decimal
-     2) `meta[property="product:price:amount"]` (fallback `meta[itemprop="price"]`, `meta[property="og:price:amount"]`)
-     3) Targeted DOM selector(s) for the current sale price (avoid scanning all page text; do not use `document.body.innerText` unless completely blocked).
-        - Try product-briefing price blocks first (examples: `[class*="product-briefing"] [class*="price"]`, `[class*="product-briefing"] [class*="current"]`).
-        - If multiple candidates exist, prefer one that contains a currency symbol like "NT$" and is NOT crossed out.
-     - Avoid crossed-out prices: ignore text inside `<del>/<s>` and ignore elements with computed `textDecorationLine` containing `"line-through"`.
+     2) DOM selectors for the current sale price:
+        - Search for elements containing "$" or "NT$" with font-size > 20px.
+        - Try containers like `[class*="page-product"]`, `[class*="product-briefing"]`.
+        - Avoid crossed-out prices: ignore text inside `<del>/<s>` and ignore elements with computed `textDecorationLine` containing `"line-through"`.
+     3) `meta[property="product:price:amount"]` (fallback `meta[itemprop="price"]`, `meta[property="og:price:amount"]`)
    - If the page is not blocked and you still cannot get a non-empty `title` OR a valid `price` OR a non-empty `description`,
      return status="error" with a short reason (what was missing).
 4) ALWAYS close the tab you opened in step (0) via DevTools (`close_page` with `pageIdx`), regardless of success or failure.
@@ -125,22 +126,24 @@ Image extraction (overlay thumbnails):
 Variation extraction (fast DOM strategy, no massive DOM scan):
 - Goal: identify product variation options (e.g., “款式/顏色/規格”) quickly using local, stable structures.
 - Do NOT use `document.body.innerText` or scan thousands of nodes. Use narrow selectors.
-- Preferred anchor: the product-briefing area where price/title are shown. Variation buttons are typically rendered in a small clustered row/column near that area.
+- Preferred anchor: the product briefing area. Variation buttons are typically rendered in a small clustered row/column.
 
 Selectors and heuristics (in order):
-1) Target variation button groups by class patterns:
+1) Find variation groups by searching for a heading or label with text like “規格”, “款式”, “顏色”, “樣式”.
+2) Target variation button groups by class patterns:
    - Group containers:
+     - `div.flex.items-center.j7HL5Q`
      - `[class*="product-briefing"] [class*="variation"]`
-     - `[class*="product-briefing"] [class*="variant"]`
      - `[class*="product-variant"]`
      - `[class*="product-variation"]`
    - Buttons inside the group:
+     - `button.sApkZm`
      - `button` or `[role="button"]`
-2) Accept a group only if it has at least 2 option buttons.
-3) Option text constraints:
+3) Accept a group only if it has at least 2 option buttons.
+4) Option text constraints:
    - Trim, collapse whitespace.
    - Keep text length <= 50 characters.
-4) Exclude non-option UI:
+5) Exclude non-option UI:
    - Skip elements inside `del/s` or with `text-decoration: line-through`.
    - Skip text matching generic UI words like “加入購物車”, “直接購買”, “聊聊”, pagination digits, or ratings.
 

@@ -205,6 +205,7 @@ func (r *GeminiRunner) logGeminiOutput(url string, out string) {
 //
 // We want stdout to be the model text only (which should be the JSON contract).
 func unwrapGeminiJSON(raw string) (string, bool) {
+	raw = strings.TrimSpace(raw)
 	if raw == "" || !strings.HasPrefix(raw, "{") {
 		return "", false
 	}
