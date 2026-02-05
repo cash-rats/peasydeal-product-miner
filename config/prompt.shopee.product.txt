@@ -59,6 +59,8 @@ Task:
         - Normalize: strip currency symbols/commas/spaces; keep digits + optional decimal
      2) `meta[property="product:price:amount"]` (fallback `meta[itemprop="price"]`, `meta[property="og:price:amount"]`)
      3) Targeted DOM selector(s) for the current sale price (avoid scanning all page text; do not use `document.body.innerText` unless completely blocked).
+        - Try product-briefing price blocks first (examples: `[class*="product-briefing"] [class*="price"]`, `[class*="product-briefing"] [class*="current"]`).
+        - If multiple candidates exist, prefer one that contains a currency symbol like "NT$" and is NOT crossed out.
      - Avoid crossed-out prices: ignore text inside `<del>/<s>` and ignore elements with computed `textDecorationLine` containing `"line-through"`.
    - If the page is not blocked and you still cannot get a non-empty `title` OR a valid `price` OR a non-empty `description`,
      return status="error" with a short reason (what was missing).
@@ -84,6 +86,7 @@ Rules:
 - If status="error": include error (string) with the failure reason.
 - Output must be EXACTLY ONE JSON object and NOTHING ELSE (no prose, no markdown fences like ```json).
 - Do NOT output placeholder type-descriptions like "string" as values; output real values with correct JSON types.
+- Do NOT output empty strings for currency/price. If missing, omit those keys and set status="error" (or "needs_manual" if blocked).
 - Normalize price:
   - Strip currency symbols, commas, spaces; keep only digits and an optional decimal point.
   - If the page shows a range, use the minimum.

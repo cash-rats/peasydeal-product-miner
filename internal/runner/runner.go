@@ -95,6 +95,23 @@ func normalizeOptions(opts Options) Options {
 	return opts
 }
 
+func normalizeResult(res Result) {
+	if v, ok := res["currency"].(string); ok {
+		clean := strings.TrimSpace(v)
+		if clean == "" {
+			delete(res, "currency")
+		} else {
+			res["currency"] = strings.ToUpper(clean)
+		}
+	}
+
+	if v, ok := res["price"].(string); ok {
+		if strings.TrimSpace(v) == "" {
+			delete(res, "price")
+		}
+	}
+}
+
 func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	opts = normalizeOptions(opts)
 	if err := r.validator.Struct(opts); err != nil {
@@ -182,6 +199,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	res.setdefault("source", string(src))
 	res.setdefault("captured_at", nowISO())
 	res.ensureImagesArray()
+	normalizeResult(res)
 	if authErr != nil {
 		res["auth_check_error"] = authErr.Error()
 	}

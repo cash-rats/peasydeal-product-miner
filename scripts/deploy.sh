@@ -66,7 +66,7 @@ require_var GHCR_TOKEN
 PROD_PORT="${PROD_PORT:-22}"
 PROD_SSH_KEY_PATH="${PROD_SSH_KEY_PATH:-}"
 COMPOSE_FILE="${COMPOSE_FILE:-${ROOT_DIR}/docker-compose.yml}"
-SERVICE_NAME="${SERVICE_NAME:-server}"
+SERVICE_NAME="${SERVICE_NAME:-worker}"
 IMAGE="${IMAGE:-ghcr.io/${GHCR_USER}/peasydeal-product-miner:latest}"
 
 ssh_opts=(-p "$PROD_PORT")
