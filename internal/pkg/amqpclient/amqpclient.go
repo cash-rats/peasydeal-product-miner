@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"peasydeal-product-miner/config"
 
@@ -37,7 +38,9 @@ func NewAMQP(p NewAMQPParams) (AMQPOut, error) {
 		return AMQPOut{Conn: nil, Channel: nil}, nil
 	}
 
-	conn, err := amqp.Dial(url)
+	conn, err := amqp.DialConfig(url, amqp.Config{
+		Heartbeat: 10 * time.Second,
+	})
 	if err != nil {
 		return AMQPOut{}, fmt.Errorf("rabbitmq dial: %w", err)
 	}
