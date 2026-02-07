@@ -79,7 +79,7 @@ Gemini CLI:
 
 Implication:
 - We should not assume one identical folder convention for both CLIs.
-- We should keep one canonical in-repo skill source and sync/install into each CLI's native convention.
+- We should keep one canonical in-repo skill source (`skills/`) and load it directly from Go orchestrator code.
 
 ## 6) Proposed Architecture (To-Be)
 
@@ -105,9 +105,9 @@ Implication:
 - Better observability per stage (latency/failure cause)
 - Safer cross-tool compatibility than implicit native skill auto-selection
 
-### 6.3 Skills packaging strategy (hybrid)
+### 6.3 Skills packaging strategy
 
-Use one canonical skill source in-repo, then map to native CLI skill stores.
+Use one canonical skill source in-repo. The Go orchestrator loads these files directly when building stage prompts.
 
 Canonical source (repo-tracked):
 - `skills/shopee-product-crawler/SKILL.md`
@@ -116,16 +116,6 @@ Canonical source (repo-tracked):
   - `skills/_shared/...`
   - `skills/<name>/scripts/...`
   - `skills/<name>/references/...`
-
-Codex mapping:
-- Workspace: expose canonical skills under `.agents/skills/<name>/...` (copy or symlink in dev; copy in CI/docker).
-
-Gemini mapping:
-- Install from canonical path using CLI:
-  - `gemini skills install ./skills/shopee-product-crawler --scope workspace`
-  - `gemini skills install ./skills/shopee-product-process --scope workspace`
-  - `gemini skills enable shopee-product-crawler`
-  - `gemini skills enable shopee-product-process`
 
 Runtime model:
 - Orchestrator still controls stage order.
@@ -183,14 +173,11 @@ flowchart TD
     FV --> OUT[Write final JSON output]
 ```
 
-Canonical skills to native tool conventions:
+Canonical skills consumed directly by orchestrator:
 
 ```mermaid
 flowchart LR
-    CS[Canonical repo skills\nskills/<name>/SKILL.md] --> C[Codex workspace mapping\n.agents/skills/<name>/...]
-    CS --> G[Gemini workspace install\ngemini skills install/enable]
-    C --> R[Stage execution runtime]
-    G --> R
+    CS[Canonical repo skills\nskills/<name>/SKILL.md] --> R[Stage execution runtime]
     R --> O[Go orchestrator controls order\nretry timeout validation]
 ```
 
@@ -216,11 +203,9 @@ flowchart LR
 ### FR-5 Tool parity
 - Pipeline MUST work with both `tool=codex` and `tool=gemini`.
 
-### FR-6 Native skill install/sync
-- System MUST define a repeatable workflow to sync/install canonical skills into:
-  - Codex workspace skill directory convention
-  - Gemini workspace skill registry
-- CI and docker startup MUST support non-interactive skill setup.
+### FR-6 Skill source of truth
+- System MUST use `skills/<name>/SKILL.md` as the canonical source for stage instructions.
+- Stage prompt building MUST load skill content directly from repo files (no required native CLI sync/install step).
 
 ## 8) Non-Functional Requirements
 
@@ -269,7 +254,7 @@ Notes:
 - Confirm final Stage A contract fields.
 - Confirm whether Taobao follows same two-stage model or a tailored pair.
 - Add doc section in `README.md` describing pipeline mode and debug outputs.
-- Confirm canonical skill source directory and install/sync behavior per CLI.
+- Confirm canonical skill source directory and direct-loading behavior in orchestrator.
 
 Deliverable:
 - agreed contracts + docs update
@@ -285,7 +270,7 @@ Deliverable:
 Deliverable:
 - compile-safe orchestrator skeleton behind feature flag
 
-## Phase 2: Canonical skill files + native mapping
+## Phase 2: Canonical skill files + prompt composition
 
 - Add canonical skill files under `skills/<name>/SKILL.md`.
 - Add prompt composer utility:
@@ -293,12 +278,8 @@ Deliverable:
   - injects structured input JSON
   - appends strict output guard
 - Add URL/source substitution where required.
-- Add `scripts/skills-sync.sh`:
-  - Sync canonical skills into `.agents/skills/` for Codex workspace mode
-  - Install/enable workspace skills for Gemini via `gemini skills ...`
-
 Deliverable:
-- stage prompt generation unit tests + reproducible skill install/sync script
+- stage prompt generation unit tests
 
 ## Phase 3: Stage A (crawl) execution path
 
@@ -324,7 +305,6 @@ Deliverable:
 - Default to `legacy` first.
 - Run A/B shadow tests on sample URLs.
 - Promote `skills` to default after stability threshold.
-- Add `make skills-sync` for local/dev/docker parity.
 
 Deliverable:
 - controlled rollout with rollback switch
@@ -338,14 +318,12 @@ New:
 - `internal/runner/stage_prompt_builder.go`
 - `skills/shopee-product-crawler/SKILL.md`
 - `skills/shopee-product-process/SKILL.md`
-- `scripts/skills-sync.sh`
 - `docs/skills-pipeline-prd.md` (this file)
 
 Updated:
 - `internal/runner/runner.go` (route to legacy vs pipeline mode)
 - `config/config.go` (add pipeline mode config if approved)
 - `README.md` (run instructions + mode flags)
-- `Makefile` (`skills-sync` target)
 
 ## 12) Testing Strategy
 
@@ -376,8 +354,8 @@ Updated:
 - Risk: Ambiguous ownership between skill text and Go logic
   - Mitigation: contracts in Go are source of truth; skill files only describe behavior
 
-- Risk: Native CLI skills mismatch across tools
-  - Mitigation: canonical `skills/` source + deterministic sync/install step per CLI + orchestrator-owned stage order
+- Risk: Stage instruction drift across tools
+  - Mitigation: one canonical `skills/` source loaded directly by orchestrator + shared stage contracts in Go
 
 ## 14) Rollout Metrics
 
@@ -405,7 +383,7 @@ Promotion criteria (example):
 Proceed with a hybrid approach:
 - keep deterministic orchestration in Go
 - keep skill content as canonical `skills/<name>/SKILL.md`
-- map canonical skills to native Codex/Gemini conventions through a scripted sync/install step
+- load canonical skills directly from repo files in stage prompt builder
 - avoid hard dependency on implicit skill auto-selection for stage order
 
 Recommendation call:
@@ -515,26 +493,15 @@ All stage prompts must be built by `internal/runner/stage_prompt_builder.go` wit
 
 No ad-hoc stage prompt construction elsewhere.
 
-### 17.6 Native skill sync/install contract
+### 17.6 Skill loading contract
 
-Create `scripts/skills-sync.sh` with idempotent behavior.
-
-Inputs:
-- `--tool codex|gemini|both` (default `both`)
-- `--scope workspace|user` (default `workspace`)
-- `--dry-run` optional
+Stage prompt builder MUST load skill text directly from:
+- `skills/shopee-product-crawler/SKILL.md`
+- `skills/shopee-product-process/SKILL.md`
 
 Behavior:
-- Codex:
-  - Sync `skills/*` into `.agents/skills/*` for workspace scope.
-  - Preserve `SKILL.md` and subfolders (`scripts`, `references`, `assets`).
-- Gemini:
-  - Run install for each skill from `./skills/<name>` with selected scope.
-  - Run enable for each installed skill.
-
-Failure behavior:
-- Non-zero exit if any requested tool sync/install fails.
-- Print a per-skill summary line (`ok|fail`).
+- Missing skill file is a hard error for that stage.
+- No native CLI skill installation/synchronization script is required for pipeline execution.
 
 ### 17.7 Config and mode switching
 
