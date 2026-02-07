@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os/exec"
 	"strings"
 	"time"
@@ -84,15 +83,15 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 	}
 
 	if _, err := extractJSONObjectWithStatus(modelText); err == nil {
-		r.logGeminiOutput(url, modelText)
 		return modelText, nil
 	}
 
-	if _, err := extractFirstJSONObject(modelText); err == nil {
-		r.logger.Infow("runner_gemini_repair_attempt", "tool", "gemini", "url", url, "err", "missing status")
-	} else {
-		r.logger.Infow("runner_gemini_repair_attempt", "tool", "gemini", "url", url, "err", err.Error())
-	}
+	r.logger.Infow(
+		"runner_gemini_repair_attempt",
+		"tool", "gemini",
+		"url", url,
+		"err", diagnoseContractIssue(modelText),
+	)
 	repairPrompt := buildGeminiRepairPrompt(url, modelText)
 
 	repairedText, rerr := r.runModelText(url, repairPrompt)
@@ -107,7 +106,6 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 	}
 
 	r.logger.Infow("runner_gemini_repair_succeeded", "tool", "gemini", "url", url)
-	r.logGeminiOutput(url, repairedText)
 	return repairedText, nil
 }
 
@@ -137,7 +135,6 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		log.Printf("err ! %v %v", err.Error(), cmd.Stderr)
 		r.logger.Errorf(
 			"⏱️ crawl failed tool=gemini url=%s duration=%s err=%s",
 			url,
@@ -147,18 +144,18 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 		return "", fmt.Errorf("gemini failed: %s", err.Error())
 	}
 
+	raw := stdout.String()
 	r.logger.Infow(
 		"crawl_finished",
 		"tool", "gemini",
 		"url", url,
+		"raw", raw,
 		"duration", time.Since(start).Round(time.Millisecond).String(),
 	)
 
-	raw := stdout.String()
 	if unwrapped, ok := unwrapGeminiJSON(raw); ok {
 		return unwrapped, nil
 	}
-	r.logGeminiOutput(url, raw)
 	return raw, nil
 }
 
@@ -183,30 +180,9 @@ func (r *GeminiRunner) runAuthProbe() (bool, string) {
 		if ctx.Err() == context.DeadlineExceeded {
 			return false, "timeout"
 		}
-		return false, formatGeminiAuthErr()
+		return false, "Seems like gemini is not authenticated"
 	}
 	return true, ""
-}
-
-func formatGeminiAuthErr() string {
-	return "Seems like gemini is not authenticated"
-}
-
-func (r *GeminiRunner) logGeminiOutput(url string, out string) {
-	out = strings.TrimSpace(out)
-	truncated := false
-	if out == "" {
-		r.logger.Debugw("llm_output", "tool", "gemini", "url", url, "empty", true)
-		return
-	}
-
-	const maxChars = 8000
-	if len(out) > maxChars {
-		truncated = true
-		out = out[:maxChars] + "...(truncated)"
-	}
-
-	r.logger.Debugw("llm_output", "tool", "gemini", "url", url, "truncated", truncated, "output", out)
 }
 
 // unwrapGeminiJSON extracts the tool's "response" field when Gemini is invoked with `-o json`.

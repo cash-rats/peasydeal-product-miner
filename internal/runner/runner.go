@@ -161,6 +161,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	}
 
 	prompt, err := buildPrompt(opts, src)
+	r.logger.Infof("📨 prompt used: %v", prompt)
 	if err != nil {
 		res := errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, res)
@@ -237,6 +238,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 
 	outPath, err := writeResult(opts.OutDir, res)
 	return outPath, res, err
+	// return "", nil, nil
 }
 
 func nowISO() string {
@@ -257,7 +259,7 @@ func buildPrompt(opts Options, src source.Source) (string, error) {
 		if opts.PromptFile != "" {
 			return "", fmt.Errorf("prompt_file is not supported when prompt_mode=skill")
 		}
-		return buildSkillPrompt(src, opts.URL, opts.SkillName)
+		return buildSkillPrompt(src, opts.URL, opts.SkillName, opts.Tool)
 	case promptModeLegacy:
 		return loadPrompt(opts.PromptFile, opts.URL)
 	default:

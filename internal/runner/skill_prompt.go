@@ -9,7 +9,7 @@ import (
 
 const shopeeProductCrawlerSkill = "shopee-product-crawler"
 
-func buildSkillPrompt(src source.Source, url string, skillName string) (string, error) {
+func buildSkillPrompt(src source.Source, url string, skillName string, tool string) (string, error) {
 	skillName = strings.TrimSpace(skillName)
 	if skillName == "" {
 		skillName = defaultSkillName(src)
@@ -23,36 +23,7 @@ func buildSkillPrompt(src source.Source, url string, skillName string) (string, 
 	}
 
 	return fmt.Sprintf(`
-Use the "%s" skill as the primary crawling guide.
-
-Target URL: %s
-
-Return EXACTLY ONE JSON object that matches the crawler output contract:
-{
-  "url": "string",
-  "status": "ok | needs_manual | error",
-  "captured_at": "ISO-8601 UTC timestamp",
-  "notes": "string (required when status=needs_manual)",
-  "error": "string (required when status=error)",
-  "title": "string",
-  "description": "string",
-  "currency": "string (e.g. TWD)",
-  "price": "number or numeric string",
-  "images": ["string"] (optional; empty array allowed),
-  "variations": [
-    {
-      "title": "string",
-      "position": "int",
-      "image": "string"
-    }
-  ]
-}
-
-Rules:
-- Output JSON only.
-- No markdown fences.
-- No extra prose.
-- If blocked by login/verification/CAPTCHA and product content is unavailable, return status="needs_manual" with notes.
+Use the "%s" skill as the primary crawling guide. Target URL: %s
 `, skillName, url), nil
 }
 

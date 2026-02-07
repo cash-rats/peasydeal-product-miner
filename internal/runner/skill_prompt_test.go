@@ -31,7 +31,7 @@ func TestNormalizeOptions_UsesEnvPromptMode(t *testing.T) {
 }
 
 func TestBuildSkillPrompt_Shopee(t *testing.T) {
-	got, err := buildSkillPrompt(source.Shopee, "https://shopee.tw/product/1/2", "")
+	got, err := buildSkillPrompt(source.Shopee, "https://shopee.tw/product/1/2", "", "codex")
 	if err != nil {
 		t.Fatalf("buildSkillPrompt error: %v", err)
 	}
@@ -41,10 +41,13 @@ func TestBuildSkillPrompt_Shopee(t *testing.T) {
 	if !strings.Contains(got, "https://shopee.tw/product/1/2") {
 		t.Fatalf("expected URL in prompt: %s", got)
 	}
+	if !strings.Contains(got, "Use the \"shopee-product-crawler\" skill as the primary crawling guide") {
+		t.Fatalf("expected skill invocation prompt: %s", got)
+	}
 }
 
 func TestBuildSkillPrompt_UnsupportedSource(t *testing.T) {
-	_, err := buildSkillPrompt(source.Taobao, "https://taobao.com/item/1", "")
+	_, err := buildSkillPrompt(source.Taobao, "https://taobao.com/item/1", "", "codex")
 	if err == nil {
 		t.Fatalf("expected error for unsupported source")
 	}

@@ -1,8 +1,6 @@
 SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
-# AI tool selection for dev-once (codex or gemini).
-tool ?= codex
 # URL to crawl for dev-once (required).
 url ?=
 
@@ -18,6 +16,10 @@ ifneq (,$(wildcard .env))
 include .env
 export
 endif
+
+# AI tool selection for dev-once (codex or gemini).
+# Priority: explicit `tool=...` > CRAWL_TOOL from env/.env > codex.
+tool ?= $(if $(strip $(CRAWL_TOOL)),$(strip $(CRAWL_TOOL)),codex)
 
 .PHONY: help
 help:
@@ -88,7 +90,7 @@ dev-once: dev-doctor
 docker-once: docker-doctor
 	@URL="$(strip $(url))"; \
 	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make docker-once url=https://shopee.tw/..."; exit 2; fi; \
-	docker compose run --rm --build runner /app/devtool once --tool "$(tool)" --url "$$URL" --out-dir /out
+	docker compose run --remove-orphans --rm --build runner /app/devtool once --tool "$(tool)" --url "$$URL" --out-dir /out
 
 .PHONY: docker-doctor
 docker-doctor:
