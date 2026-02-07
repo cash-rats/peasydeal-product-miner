@@ -94,5 +94,5 @@ ssh "${ssh_opts[@]}" "${PROD_USER}@${PROD_HOST}" \
   "cd '$PROD_DIR' && \
   echo '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USER' --password-stdin && \
   docker compose pull '$SERVICE_NAME' && \
-  docker compose up -d --force-recreate '$SERVICE_NAME' && \
+  docker compose up --remove-orphans -d --force-recreate '$SERVICE_NAME' && \
   docker system prune -af"
