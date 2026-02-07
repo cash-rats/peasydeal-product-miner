@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: scripts/deploy.sh <env-name> [--build]
+Usage: scripts/deploy.sh <env-name> [--build] [--no-skills]
 
 Requires:
   .env.deploy.<env-name>  # deploy target + registry creds
@@ -11,6 +11,7 @@ Requires:
 
 Optional flags:
   --build   Build + push the image before remote deploy (default: pull-only)
+  --no-skills  Skip uploading local Codex/Gemini skills directories (default: upload)
 EOF
 }
 
@@ -25,10 +26,31 @@ if [[ -z "$ENV_NAME" ]]; then
   exit 2
 fi
 
+shift
+
 BUILD=0
-if [[ "${2:-}" == "--build" ]]; then
-  BUILD=1
-fi
+UPLOAD_SKILLS=1
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --build)
+      BUILD=1
+      shift
+      ;;
+    --no-skills)
+      UPLOAD_SKILLS=0
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown arg: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -89,6 +111,33 @@ ssh "${ssh_opts[@]}" "${PROD_USER}@${PROD_HOST}" "mkdir -p '$PROD_DIR' '$PROD_DI
 scp "${scp_opts[@]}" "$COMPOSE_FILE" "${PROD_USER}@${PROD_HOST}:${PROD_DIR}/docker-compose.yml"
 scp "${scp_opts[@]}" "$PROD_ENV" "${PROD_USER}@${PROD_HOST}:${PROD_DIR}/.env"
 scp -r "${scp_opts[@]}" "${ROOT_DIR}/config/." "${PROD_USER}@${PROD_HOST}:${PROD_DIR}/config"
+
+sync_dir_tar() {
+  local local_dir="$1"
+  local remote_dir="$2"
+
+  if [[ ! -d "$local_dir" ]]; then
+    return 0
+  fi
+
+  local local_parent local_base remote_parent
+  local_parent="$(dirname "$local_dir")"
+  local_base="$(basename "$local_dir")"
+  remote_parent="$(dirname "$remote_dir")"
+
+  echo "Uploading directory: ${local_dir} -> ${PROD_USER}@${PROD_HOST}:${remote_dir}"
+  tar -czf - -C "$local_parent" "$local_base" | ssh "${ssh_opts[@]}" "${PROD_USER}@${PROD_HOST}" \
+    "mkdir -p '$remote_parent' && rm -rf '$remote_dir' && tar -xzf - -C '$remote_parent'"
+}
+
+if [[ "$UPLOAD_SKILLS" == "1" ]]; then
+  # docker-compose.yml bind-mounts ./codex:/codex and ./gemini:/gemini, and entrypoint.sh maps:
+  #   $HOME/.codex -> /codex/.codex
+  #   $HOME/.gemini -> /gemini/.gemini
+  # So the skill directories must exist on the remote host under $PROD_DIR/codex and $PROD_DIR/gemini.
+  sync_dir_tar "${ROOT_DIR}/codex/.codex/skills" "${PROD_DIR%/}/codex/.codex/skills"
+  sync_dir_tar "${ROOT_DIR}/gemini/.gemini/skills" "${PROD_DIR%/}/gemini/.gemini/skills"
+fi
 
 ssh "${ssh_opts[@]}" "${PROD_USER}@${PROD_HOST}" \
   "cd '$PROD_DIR' && \

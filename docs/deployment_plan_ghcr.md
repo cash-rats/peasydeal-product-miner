@@ -35,6 +35,13 @@ Goal: remove manual SSH + git pull + build; deploy by pushing an image to GHCR a
 - Update devtool when it changes:
   - `scripts/deploy-devtool.sh <env> --bin <local_devtool_path>`
 
+### Skills (Codex/Gemini)
+- By default `scripts/deploy.sh` also uploads local skills directories used by the bind mounts in `docker-compose.yml`:
+  - `codex/.codex/skills` -> `${PROD_DIR}/codex/.codex/skills`
+  - `gemini/.gemini/skills` -> `${PROD_DIR}/gemini/.gemini/skills`
+- To skip skill upload (e.g. if the server manages skills separately):
+  - `scripts/deploy.sh <env> --no-skills`
+
 ## Environment Naming
 - Example VPS env name: `justin-static-home-4`.
 - Env files should be named accordingly:
@@ -45,6 +52,7 @@ Goal: remove manual SSH + git pull + build; deploy by pushing an image to GHCR a
 - The repo already includes `scripts/deploy.sh` which:
   - Builds/pushes the image to GHCR (optional `--build`).
   - Uploads `docker-compose.yml` and `.env` to the server.
+  - Uploads Codex/Gemini skill directories (unless `--no-skills`).
   - Runs `docker compose pull` + `up -d` on the remote host.
 - `docker-compose.yml` uses:
   - `image: ghcr.io/${GHCR_USER}/peasydeal-product-miner:latest`

@@ -35,13 +35,17 @@ type GeminiRunner struct {
 }
 
 func NewGeminiRunner(cfg GeminiRunnerConfig) *GeminiRunner {
+	logger := cfg.Logger
+	if logger == nil {
+		logger = zap.NewNop().Sugar()
+	}
 	return &GeminiRunner{
 		cmd:                cfg.Cmd,
 		model:              cfg.Model,
 		workDir:            resolveRunnerWorkDir(cfg.WorkDir),
 		execCommand:        exec.Command,
 		execCommandContext: exec.CommandContext,
-		logger:             cfg.Logger,
+		logger:             logger,
 	}
 }
 
@@ -84,6 +88,26 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 
 	if _, err := extractJSONObjectWithStatus(modelText); err == nil {
 		return modelText, nil
+	}
+
+	// If Gemini cut off the JSON mid-output (common when output is too long or the model hits limits),
+	// a "repair" prompt can't recover missing fields. First try re-running the original crawl prompt,
+	// but with explicit output size limits to avoid truncation.
+	if diagnoseContractIssue(modelText) == "invalid or truncated JSON" {
+		r.logger.Infow(
+			"runner_gemini_retry_truncation",
+			"tool", "gemini",
+			"url", url,
+		)
+
+		retryPrompt := buildGeminiTruncationRetryPrompt(prompt)
+		retriedText, rerr := r.runModelText(url, retryPrompt)
+		if rerr == nil {
+			if _, perr := extractJSONObjectWithStatus(retriedText); perr == nil {
+				r.logger.Infow("runner_gemini_retry_truncation_succeeded", "tool", "gemini", "url", url)
+				return retriedText, nil
+			}
+		}
 	}
 
 	r.logger.Infow(
@@ -149,13 +173,16 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 		"crawl_finished",
 		"tool", "gemini",
 		"url", url,
-		"raw", raw,
+		"raw_truncated", len(raw) > 8000,
+		"raw_preview", previewText(raw, 8000),
 		"duration", time.Since(start).Round(time.Millisecond).String(),
 	)
 
 	if unwrapped, ok := unwrapGeminiJSON(raw); ok {
+		r.logGeminiOutput(url, unwrapped)
 		return unwrapped, nil
 	}
+	r.logGeminiOutput(url, raw)
 	return raw, nil
 }
 
@@ -264,12 +291,59 @@ Rules:
 - url must be %q.
 - If required fields are missing, set status="error" and explain in error.
 - If the text indicates a login/verification/CAPTCHA wall, set status="needs_manual" and explain in notes.
+- Always include "variations": [] if you can't infer variations.
+- If images are too many, include only the first 20.
+- If description is too long, truncate it to 1500 characters.
 
 TEXT:
 <<<
 %s
 >>>
 `, url, previousOutput)
+}
+
+func buildGeminiTruncationRetryPrompt(originalPrompt string) string {
+	// IMPORTANT: This string is appended to the crawl prompt that DOES use tools.
+	// Keep it short so it doesn't bloat the tool-augmented context.
+	return originalPrompt + `
+
+Output limits (mandatory):
+- Output MUST be exactly ONE JSON object and NOTHING ELSE.
+- Always include "variations": [] when no variations found.
+- If there are many images/variations, include only the first 20 of each.
+- Truncate "description" to at most 1500 characters.
+- Keep the whole JSON under ~6000 characters; if needed, drop optional fields (images/variations) first.
+`
+}
+
+func (r *GeminiRunner) logGeminiOutput(url string, out string) {
+	truncated := false
+	if out == "" {
+		r.logger.Debugw(
+			"llm_output",
+			"tool", "gemini",
+			"url", url,
+			"empty", true,
+		)
+		return
+	}
+
+	const maxChars = 8000
+	if len(out) > maxChars {
+		truncated = true
+		out = out[:maxChars] + "...(truncated)"
+	}
+	r.logger.Debugw("llm_output", "tool", "gemini", "url", url, "truncated", truncated, "output", out)
+}
+
+func previewText(s string, max int) string {
+	if max <= 0 {
+		return ""
+	}
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "...(truncated)"
 }
 
 var _ ToolRunner = (*GeminiRunner)(nil)
