@@ -25,6 +25,7 @@
 
 # Local Gemini state (optional)
 /gemini/.gemini/*
+!/gemini/.gemini/skills
 !/gemini/.gemini/settings.json
 /gemini/.gemini/tmp/
 /gemini/.cache/
