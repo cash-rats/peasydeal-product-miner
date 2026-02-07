@@ -15,6 +15,7 @@ type CodexRunnerConfig struct {
 	Cmd              string
 	Model            string
 	SkipGitRepoCheck bool
+	WorkDir          string
 	Logger           *zap.SugaredLogger
 }
 
@@ -22,9 +23,10 @@ type CodexRunner struct {
 	cmd              string
 	model            string
 	skipGitRepoCheck bool
+	workDir          string
 	logger           *zap.SugaredLogger
 
-	execCommand func(name string, args ...string) *exec.Cmd
+	execCommand        func(name string, args ...string) *exec.Cmd
 	execCommandContext func(ctx context.Context, name string, args ...string) *exec.Cmd
 }
 
@@ -34,11 +36,12 @@ func NewCodexRunner(cfg CodexRunnerConfig) *CodexRunner {
 		logger = zap.NewNop().Sugar()
 	}
 	return &CodexRunner{
-		cmd:              cfg.Cmd,
-		model:            cfg.Model,
-		skipGitRepoCheck: cfg.SkipGitRepoCheck,
-		logger:           logger,
-		execCommand:      exec.Command,
+		cmd:                cfg.Cmd,
+		model:              cfg.Model,
+		skipGitRepoCheck:   cfg.SkipGitRepoCheck,
+		workDir:            resolveRunnerWorkDir(cfg.WorkDir),
+		logger:             logger,
+		execCommand:        exec.Command,
 		execCommandContext: exec.CommandContext,
 	}
 }
@@ -147,6 +150,9 @@ func (r *CodexRunner) runModelText(url string, prompt string) (string, error) {
 	)
 
 	cmd := r.execCommand(r.cmd, args...)
+	if r.workDir != "" {
+		cmd.Dir = r.workDir
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -189,6 +195,9 @@ func (r *CodexRunner) runAuthProbe() (bool, string) {
 	args = append(args, "Return exactly: OK")
 
 	cmd := r.execCommandContext(ctx, r.cmd, args...)
+	if r.workDir != "" {
+		cmd.Dir = r.workDir
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

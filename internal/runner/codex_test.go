@@ -15,7 +15,7 @@ func TestCodexRunner_Run_ReturnsExtractedJSON_NoRepair(t *testing.T) {
 	t.Parallel()
 
 	var calls [][]string
-	outputs := []string{`{"ok":true}`}
+	outputs := []string{`{"status":"ok","url":"https://example.com","captured_at":"2026-01-01T00:00:00Z","title":"t","description":"d","currency":"TWD","price":"1"}`}
 	exits := []int{0}
 
 	r := NewCodexRunner(CodexRunnerConfig{
@@ -44,7 +44,7 @@ func TestCodexRunner_Run_ReturnsExtractedJSON_NoRepair(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run error: %v", err)
 	}
-	if got != `{"ok":true}` {
+	if got != `{"status":"ok","url":"https://example.com","captured_at":"2026-01-01T00:00:00Z","title":"t","description":"d","currency":"TWD","price":"1"}` {
 		t.Fatalf("unexpected output: %s", got)
 	}
 
@@ -61,7 +61,7 @@ func TestCodexRunner_Run_RepairsOnce(t *testing.T) {
 	t.Parallel()
 
 	var calls [][]string
-	outputs := []string{"not json", `{"repaired":true}`}
+	outputs := []string{"not json", `{"status":"ok","url":"https://example.com/p/1","captured_at":"2026-01-01T00:00:00Z","title":"t","description":"d","currency":"TWD","price":"1"}`}
 	exits := []int{0, 0}
 
 	url := "https://example.com/p/1"
@@ -93,7 +93,7 @@ func TestCodexRunner_Run_RepairsOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run error: %v", err)
 	}
-	if got != `{"repaired":true}` {
+	if got != `{"status":"ok","url":"https://example.com/p/1","captured_at":"2026-01-01T00:00:00Z","title":"t","description":"d","currency":"TWD","price":"1"}` {
 		t.Fatalf("unexpected output: %s", got)
 	}
 
@@ -175,4 +175,3 @@ func containsAll(args []string, want []string) bool {
 	}
 	return true
 }
-

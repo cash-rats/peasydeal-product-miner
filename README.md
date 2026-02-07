@@ -38,6 +38,8 @@ Optional (only if you want to override defaults):
 - `RABBITMQ_ROUTING_KEY`
 - `RABBITMQ_PREFETCH`
 - `RABBITMQ_DECLARE_TOPOLOGY`
+- `CRAWL_PROMPT_MODE` (`legacy` by default; set to `skill` to use skill-mode prompts)
+- `CRAWL_SKILL_NAME` (optional; defaults to `shopee-product-crawler` in skill mode)
 
 ## 3) Run database migrations (once)
 
@@ -60,6 +62,46 @@ This runs the AMQP worker binary (`/app/worker` from `cmd/worker/main.go`) insid
 - The worker consumes from RabbitMQ and writes drafts into the SQLite DB under `./out`.
 - Docker mounts `./out` into the container, so outputs persist on the host.
 - Codex/Gemini auth is stored in `./codex/.codex` and `./gemini/.gemini` (mounted into the container).
+
+## Skill Mode Setup
+
+Canonical skill source (repo):
+
+- `.agents/skills/shopee-product-crawler/SKILL.md`
+
+### Local environment
+
+Codex (workspace skill):
+
+- Run `make dev-once tool=codex url=<shopee_url>` from repo root with `CRAWL_PROMPT_MODE=skill`.
+
+Gemini (install once for workspace/user):
+
+```bash
+gemini skills install .agents/skills/shopee-product-crawler --scope workspace --consent
+gemini skills enable shopee-product-crawler
+```
+
+Then run with `CRAWL_PROMPT_MODE=skill`.
+
+### Docker environment
+
+Docker uses mounted tool homes:
+
+- Codex: `./codex/.codex` -> `$HOME/.codex` in container
+- Gemini: `./gemini/.gemini` -> `$HOME/.gemini` in container
+
+Sync the canonical skill into mounted homes before `docker compose up`:
+
+```bash
+mkdir -p codex/.codex/skills/shopee-product-crawler
+cp .agents/skills/shopee-product-crawler/SKILL.md codex/.codex/skills/shopee-product-crawler/SKILL.md
+
+HOME="$(pwd)/gemini" gemini skills install .agents/skills/shopee-product-crawler --scope user --consent
+HOME="$(pwd)/gemini" gemini skills enable shopee-product-crawler
+```
+
+Then set `CRAWL_PROMPT_MODE=skill` in `.env` (or environment) for `worker` / `runner`.
 
 ## Remote Worker (host Chrome + auth upload)
 

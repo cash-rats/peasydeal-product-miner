@@ -14,9 +14,9 @@
 # Local Codex state (optional)
 /codex/.codex/*
 !/codex/.codex/config.toml
+!/codex/.codex/skills/
 /codex/.codex/auth.json
 /codex/.codex/sessions/
-/codex/.codex/skills/
 /codex/.codex/log/
 /codex/.codex/tmp/
 /codex/.npm/

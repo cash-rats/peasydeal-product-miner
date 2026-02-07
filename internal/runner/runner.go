@@ -63,6 +63,8 @@ type Options struct {
 	PromptFile string
 	OutDir     string `validate:"required"`
 	Tool       string // "codex" or "gemini"
+	PromptMode string `validate:"omitempty,oneof=legacy skill"` // "legacy" (default) or "skill"
+	SkillName  string // optional override; used when PromptMode=skill
 
 	// Cmd is the binary name/path to execute (e.g. "codex" or "gemini").
 	// If empty, CodexCmd is used for backward compatibility.
@@ -89,6 +91,17 @@ func normalizeOptions(opts Options) Options {
 	opts.PromptFile = strings.TrimSpace(opts.PromptFile)
 	opts.OutDir = strings.TrimSpace(opts.OutDir)
 	opts.Tool = strings.TrimSpace(opts.Tool)
+	opts.PromptMode = normalizePromptMode(opts.PromptMode)
+	if opts.PromptMode == "" {
+		opts.PromptMode = normalizePromptMode(os.Getenv("CRAWL_PROMPT_MODE"))
+	}
+	if opts.PromptMode == "" {
+		opts.PromptMode = promptModeLegacy
+	}
+	opts.SkillName = strings.TrimSpace(opts.SkillName)
+	if opts.SkillName == "" {
+		opts.SkillName = strings.TrimSpace(os.Getenv("CRAWL_SKILL_NAME"))
+	}
 	if opts.Tool == "" {
 		opts.Tool = "codex"
 	}
@@ -134,7 +147,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 		return outPath, res, err
 	}
 
-	if opts.PromptFile == "" {
+	if opts.PromptMode == promptModeLegacy && opts.PromptFile == "" {
 		c, err := crawler.ForSource(src)
 		if err != nil {
 			res := errorResult(opts.URL, err)
@@ -147,7 +160,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 		opts.PromptFile = c.DefaultPromptFile()
 	}
 
-	prompt, err := loadPrompt(opts.PromptFile, opts.URL)
+	prompt, err := buildPrompt(opts, src)
 	if err != nil {
 		res := errorResult(opts.URL, err)
 		outPath, werr := writeResult(opts.OutDir, res)
@@ -236,6 +249,20 @@ func loadPrompt(promptPath string, url string) (string, error) {
 		return "", err
 	}
 	return strings.ReplaceAll(string(b), "{{URL}}", url), nil
+}
+
+func buildPrompt(opts Options, src source.Source) (string, error) {
+	switch opts.PromptMode {
+	case promptModeSkill:
+		if opts.PromptFile != "" {
+			return "", fmt.Errorf("prompt_file is not supported when prompt_mode=skill")
+		}
+		return buildSkillPrompt(src, opts.URL, opts.SkillName)
+	case promptModeLegacy:
+		return loadPrompt(opts.PromptFile, opts.URL)
+	default:
+		return "", fmt.Errorf("unsupported prompt_mode: %q", opts.PromptMode)
+	}
 }
 
 func parseResult(toolName string, raw string) (Result, bool, error) {

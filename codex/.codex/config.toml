@@ -1,3 +1,4 @@
+personality = "pragmatic"
 # Template config for using Chrome DevTools MCP against host Chrome from Docker.
 #
 # For Docker Desktop (macOS/Windows), containers can reach host services via:
@@ -32,6 +33,9 @@ exec npx -y chrome-devtools-mcp@latest --browser-url="http://$IP:$PORT"
 ]
 
 [projects."/app"]
+trust_level = "trusted"
+
+[projects."/codex/.codex/skills"]
 trust_level = "trusted"
 
 [notice]

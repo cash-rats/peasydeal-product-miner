@@ -56,6 +56,9 @@ The skill content should be migrated from `config/prompt.shopee.product.txt` and
 - assume the runtime prompt provides the URL
 - keep the exact output contract requirements (JSON only, one object)
 
+Skill file format:
+- `SKILL.md` MUST include YAML frontmatter with at least `name` and `description` (required by Gemini; also supported by Codex).
+
 ### 6.2 Runtime prompt (short)
 
 In “skill mode”, Go builds a short prompt:
@@ -90,6 +93,25 @@ Introduce a mode flag (config + CLI override) for Shopee crawls:
 If `skill` mode is enabled but the tool does not have the skill available, the runner should either:
 - fail fast with an actionable message, or
 - fallback to legacy mode (configurable; default is “fail fast” for correctness).
+
+### 6.5 Environments (docker vs local)
+
+This project runs in two environments with different “skill storage” expectations. Call this out explicitly because it impacts setup and failure modes.
+
+Docker:
+- Auth/config and skills are provided via mounted tool home directories:
+  - `codex/.codex` mounted to `$HOME/.codex`
+  - `gemini/.gemini` mounted to `$HOME/.gemini`
+- In this environment, `shopee-product-crawler` is expected to be present (and enabled for Gemini) under the mounted homes (user-scope skills). Skill installation/sync happens on the host before starting the container, or via an entrypoint/setup step.
+
+Local:
+- Use project-local skill sources for development iteration (plus any user-installed skills on the machine):
+  - Codex: workspace skill in `.agents/skills/...` (requires subprocess working dir = repo root).
+  - Gemini: install the same skill either to `--scope workspace` (project-scoped) or `--scope user` (machine-scoped), depending on developer preference.
+
+Source of truth:
+- Treat `.agents/skills/shopee-product-crawler` as the canonical, versioned definition.
+- Docker/user-scope copies in `codex/.codex` and `gemini/.gemini` are runtime state (gitignored) and should be synced from `.agents/skills/...` to avoid drift.
 
 ## 7) Requirements
 
@@ -150,4 +172,3 @@ Track before/after on the same URL set:
 1. Should skill mode become default for Shopee after a soak period, or remain opt-in?
 2. Do we want a separate skill per locale (e.g., Shopee TW vs SG) or a single robust skill?
 3. Should the runner preflight-check Gemini skill availability (`gemini skills list`) to produce a better error, or just surface the tool’s error?
-

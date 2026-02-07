@@ -21,6 +21,8 @@ func newOnceCmd() *cobra.Command {
 		outDir     string
 		model      string
 		tool       string
+		promptMode string
+		skillName  string
 	)
 
 	cmd := &cobra.Command{
@@ -66,6 +68,8 @@ func newOnceCmd() *cobra.Command {
 							PromptFile: promptFile,
 							OutDir:     outDir,
 							Tool:       tool,
+							PromptMode: promptMode,
+							SkillName:  skillName,
 						},
 					)
 
@@ -99,5 +103,7 @@ func newOnceCmd() *cobra.Command {
 	cmd.Flags().StringVar(&outDir, "out-dir", "out", "Output directory for result JSON")
 	cmd.Flags().StringVar(&model, "model", "", "Model override for the selected tool (optional; defaults to CODEX_MODEL/GEMINI_MODEL config)")
 	cmd.Flags().StringVar(&tool, "tool", "codex", "Tool to use (codex or gemini)")
+	cmd.Flags().StringVar(&promptMode, "prompt-mode", "", "Prompt mode: legacy or skill (optional; defaults to CRAWL_PROMPT_MODE or legacy)")
+	cmd.Flags().StringVar(&skillName, "skill-name", "", "Skill name override when --prompt-mode=skill (optional)")
 	return cmd
 }

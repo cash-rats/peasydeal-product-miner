@@ -19,15 +19,17 @@ import (
 */
 
 type GeminiRunnerConfig struct {
-	Cmd    string
-	Model  string
-	Logger *zap.SugaredLogger
+	Cmd     string
+	Model   string
+	WorkDir string
+	Logger  *zap.SugaredLogger
 }
 
 type GeminiRunner struct {
-	cmd    string
-	model  string
-	logger *zap.SugaredLogger
+	cmd     string
+	model   string
+	workDir string
+	logger  *zap.SugaredLogger
 
 	execCommand        func(name string, args ...string) *exec.Cmd
 	execCommandContext func(ctx context.Context, name string, args ...string) *exec.Cmd
@@ -37,6 +39,7 @@ func NewGeminiRunner(cfg GeminiRunnerConfig) *GeminiRunner {
 	return &GeminiRunner{
 		cmd:                cfg.Cmd,
 		model:              cfg.Model,
+		workDir:            resolveRunnerWorkDir(cfg.WorkDir),
 		execCommand:        exec.Command,
 		execCommandContext: exec.CommandContext,
 		logger:             cfg.Logger,
@@ -127,6 +130,9 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 	r.logger.Infow("crawl_started", "tool", "gemini", "url", url)
 
 	cmd := r.execCommand(r.cmd, args...)
+	if r.workDir != "" {
+		cmd.Dir = r.workDir
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -167,6 +173,9 @@ func (r *GeminiRunner) runAuthProbe() (bool, string) {
 	args = append(args, "Return exactly: OK")
 
 	cmd := r.execCommandContext(ctx, r.cmd, args...)
+	if r.workDir != "" {
+		cmd.Dir = r.workDir
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
