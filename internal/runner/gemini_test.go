@@ -56,11 +56,18 @@ func TestGeminiRunner_Run_RetriesOnTruncation(t *testing.T) {
 	if len(calls) != 2 {
 		t.Fatalf("expected 2 calls (retry on truncation), got %d", len(calls))
 	}
-	if calls[0][len(calls[0])-1] != "original prompt" {
-		t.Fatalf("unexpected first prompt: %q", calls[0][len(calls[0])-1])
+	if !containsArgPair(calls[0], "--prompt", "original prompt") {
+		t.Fatalf("unexpected first prompt args: %q", calls[0])
 	}
-	if !strings.Contains(calls[1][len(calls[1])-1], "Output limits") {
-		t.Fatalf("expected retry prompt to include output limits, got: %q", calls[1][len(calls[1])-1])
+	foundRetry := false
+	for i := 0; i < len(calls[1])-1; i++ {
+		if calls[1][i] == "--prompt" && strings.Contains(calls[1][i+1], "Output limits") {
+			foundRetry = true
+			break
+		}
+	}
+	if !foundRetry {
+		t.Fatalf("expected retry prompt to include output limits, got args: %q", calls[1])
 	}
 }
 
@@ -76,3 +83,11 @@ func TestGeminiRunnerHelperProcess(t *testing.T) {
 	os.Exit(code)
 }
 
+func containsArgPair(args []string, flag string, value string) bool {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == flag && args[i+1] == value {
+			return true
+		}
+	}
+	return false
+}

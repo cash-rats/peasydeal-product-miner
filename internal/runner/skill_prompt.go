@@ -22,9 +22,13 @@ func buildSkillPrompt(src source.Source, url string, skillName string, tool stri
 		return "", fmt.Errorf("prompt_mode=skill is currently supported for shopee only (source=%q)", src)
 	}
 
-	return fmt.Sprintf(`
-Use the "%s" skill as the primary crawling guide. Target URL: %s
-`, skillName, url), nil
+	// Gemini CLI skill triggering is somewhat sensitive to phrasing; use the most direct wording we observed
+	// to reliably activate the intended skill in headless runs.
+	if strings.EqualFold(skillName, "shopee-page-snapshot") {
+		return fmt.Sprintf(`Please use shopee-page-snapshot on %s. Follow the skill instructions exactly and return JSON only.`, url), nil
+	}
+
+	return fmt.Sprintf(`Use the "%s" skill as the primary crawling guide. Target URL: %s`, skillName, url), nil
 }
 
 func defaultSkillName(src source.Source) string {

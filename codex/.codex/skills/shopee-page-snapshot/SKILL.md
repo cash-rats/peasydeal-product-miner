@@ -13,7 +13,39 @@ Goal: perform **exactly one** browsing session to capture all state needed for d
 - variations (options text, limited)
 - variation -> image mapping for **first 10** options (best-effort; failures skipped)
 
-Important: the final stdout must be **a small JSON object only**. All large data (HTML, JSON-LD, DOM dumps) must be written to files under `/out/artifacts/<run_id>/`.
+Important: the final stdout must be **a small JSON object only**. All large data (HTML, JSON-LD, DOM dumps) must be written to files under `out/artifacts/<run_id>/` (repo-relative; works on host and in Docker where `/app/out` maps to `/out`).
+
+## Artifact file contracts (must be valid JSON / real data)
+
+Do NOT write placeholders like `...` or `{...}` or `[...]` into artifact files.
+All artifact JSON files must be valid JSON. If something is too large, truncate it and add a `*_truncated=true` flag + length metadata.
+
+Hard rule (must follow):
+- When writing `*.json` artifacts, you MUST construct a JavaScript object and write it using `JSON.stringify(obj)` (or equivalent). Never hand-build JSON strings.
+- JSON string values MUST NOT contain raw control characters (e.g. literal CR/LF/TAB). If the source text contains line breaks, they must be preserved via JSON escaping (which `JSON.stringify` handles).
+- After creating the JSON string, you MUST validate it in-page with `JSON.parse(jsonString)` before writing to disk. If validation fails, set `status="error"` and explain in `error`/`notes` (still write whatever minimal artifacts you safely can).
+- `page_state.json` MUST be **minimal** and MUST NOT include non-core debug fields like `meta` or `jsonld_raw`. Those frequently contain multiline text or unescaped quotes and can break JSON. If you want to save them, write separate artifacts (e.g. `meta.json`, `jsonld_raw.txt`) without risking the core pipeline.
+
+`page_state.json` MUST be a JSON object with at least:
+```json
+{
+  "url": "string",
+  "captured_at": "ISO-8601 UTC timestamp",
+  "href": "string",
+  "title": "string",
+  "readyState": "string",
+  "blocked": false,
+  "block_reason": "string",
+  "extracted": {
+    "title": "string",
+    "description": "string (<=1500 chars)",
+    "currency": "string (e.g. TWD)",
+    "price": "number or numeric string"
+  }
+}
+```
+
+`page.html`: write `document.documentElement.outerHTML` (may be truncated; do not use `...`).
 
 ## Output (stdout JSON ONLY)
 
@@ -26,6 +58,7 @@ Return EXACTLY ONE JSON object with this shape:
   "run_id": "string",
   "artifact_dir": "string",
   "snapshot_files": {
+    "snapshot": "string",
     "page_html": "string",
     "page_state": "string",
     "overlay_images": "string",
@@ -40,6 +73,7 @@ Return EXACTLY ONE JSON object with this shape:
 Rules:
 - JSON ONLY. No markdown fences. No extra text.
 - Always include `snapshot_files` keys. If a file could not be produced, set its value to `""` and explain in `notes`.
+- `run_id` and `artifact_dir` MUST be non-empty. Set `artifact_dir` to `out/artifacts/<run_id>`.
 - If blocked by login/verification/CAPTCHA: `status="needs_manual"` and explain in `notes` (still write whatever artifacts you can).
 - If something is fundamentally broken (cannot navigate / cannot talk to CDP): `status="error"` and explain in `error`.
 
@@ -76,16 +110,18 @@ Rules:
 
 ### E) Capture page state (write artifacts)
 8) Generate `run_id` (UTC timestamp + short random suffix).
-9) Set `artifact_dir = /out/artifacts/<run_id>` and ensure the directory exists (use file tools).
-10) In ONE `evaluate_script`, collect a compact `page_state` object and (separately) `outerHTML`:
+9) Set `artifact_dir = out/artifacts/<run_id>` and ensure the directory exists (use file tools).
+10) In ONE `evaluate_script`, collect a **minimal** `page_state` object and (separately) `outerHTML`:
     - `href`, `title`, `readyState`
-    - `meta`: og:title, og:description, product:price:amount, product:price:currency, etc.
-    - JSON-LD Product (best-effort): store the Product node(s) or the raw script strings (limit each raw string length; truncate if huge)
-    - Core candidates: extracted title/description/price/currency (best-effort, allow empty when blocked)
+    - Core candidates: extracted title/description/price/currency (best-effort; if not blocked but missing, set `status="error"`)
     - `outerHTML` of `document.documentElement.outerHTML` (if extremely large, truncate and record `html_truncated=true`)
+    - Optional debug artifacts (NOT inside `page_state.json`):
+      - `meta.json`: collect a small map of meta tags (must be valid JSON)
+      - `jsonld_raw.txt`: collect each `script[type="application/ld+json"].textContent` as plain text lines (avoid JSON escaping risks)
 11) Write:
-    - `/out/artifacts/<run_id>/page.html`  (HTML string; may be truncated)
-    - `/out/artifacts/<run_id>/page_state.json` (the compact state object; JSON)
+    - `out/artifacts/<run_id>/page.html`  (HTML string; may be truncated)
+    - `out/artifacts/<run_id>/page_state.json` (the compact state object; JSON)
+12) Write `out/artifacts/<run_id>/snapshot.json` containing the **same JSON object** you will print to stdout.
 
 ### F) Capture images (overlay modal)
 12) Best-effort open the product image overlay:
@@ -96,24 +132,23 @@ Rules:
    - Collect `img` sources (`currentSrc/src/data-src/data-lazy`)
    - Keep only `susercontent.com/file/`
    - Deduplicate and cap to 20
-14) Write `/out/artifacts/<run_id>/overlay_images.json`
+14) Write `out/artifacts/<run_id>/overlay_images.json`
 
 ### G) Capture variations (options)
 15) In ONE `evaluate_script`, find variation option buttons (規格/款式/顏色/樣式):
    - Extract option text (trim, <= 50 chars)
    - Return up to 20 options in DOM order with 0-based `position`
-16) Write `/out/artifacts/<run_id>/variations.json`
+16) Write `out/artifacts/<run_id>/variations.json`
 
 ### H) Variation -> image mapping (first 10, best-effort)
 17) For the first 10 variation options:
    - Hover (or click) the option (best-effort)
-   - Read the current main image URL (`currentSrc/src data-src`)
+   - Read the current main image URL (`currentSrc/src/data-src`)
    - If an option fails to map, skip it and continue
-18) Write `/out/artifacts/<run_id>/variation_image_map.json`
+18) Write `out/artifacts/<run_id>/variation_image_map.json`
 
 ### I) Close tab
 19) DevTools `close_page` with `pageIdx` (always).
 
 ## Final output
 Return the stdout JSON pointer to the artifacts (small, stable, always closed JSON).
-

@@ -129,6 +129,10 @@ Orchestrator 會執行 **S0(snapshot) → A(core) → B(images) → C(variations
 }
 ```
 
+### 5.3 已知問題（待決策）
+
+- **（2026-02-08）`price` 可能是 price range**：當商品存在 variations 且不同 variation 對應不同價格時，頁面/JSON-LD 可能呈現區間（例如 `"99.00 - 210.00"`）。當商品沒有 variations 時，通常是單一固定價格。現行 contract/validator 若只接受單一 numeric price，會導致 `status=ok` 卻因 price range 而 validation 失敗；需在後續設計中決定如何表示（例如允許 range 字串、或改為 `price_min`/`price_max` + `price` 代表 selected/default）。
+
 ### 5.2 分段技能輸出（建議）
 
 - A（core）只需要輸出最終 contract 的必要欄位（或至少包含 status/url/captured_at）。
@@ -208,6 +212,11 @@ Orchestrator 會負責把 B/C/D merge 回最終 contract。
   - [ ] 只做一次性快照（outerHTML/meta/JSON-LD/state blobs）
   - [ ] 若需 images/mapping：在 snapshot 階段先打開 overlay 再擷取 overlay 相關 DOM/state
   - [ ] 產出 snapshot artifact（`snapshot_path`）供後續 stages 使用
+  - [x] 同步提供到多個 skill 目錄以支援不同工具：
+    - [x] `.gemini/skills/shopee-page-snapshot/SKILL.md`
+    - [x] `gemini/.gemini/skills/shopee-page-snapshot/SKILL.md`
+    - [x] `.agents/skills/shopee-page-snapshot/SKILL.md`
+    - [x] `codex/.codex/skills/shopee-page-snapshot/SKILL.md`
 - [ ] 新增 skill：`shopee-product-core`
   - [ ] 從 snapshot artifacts 解析 `title/description/price/currency`
   - [ ] 確保輸出短且一定閉合 JSON
