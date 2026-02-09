@@ -24,9 +24,9 @@ Hard rule (must follow):
 - When writing `*.json` artifacts, you MUST construct a JavaScript object and write it using `JSON.stringify(obj)` (or equivalent). Never hand-build JSON strings.
 - JSON string values MUST NOT contain raw control characters (e.g. literal CR/LF/TAB). If the source text contains line breaks, they must be preserved via JSON escaping (which `JSON.stringify` handles).
 - After creating the JSON string, you MUST validate it in-page with `JSON.parse(jsonString)` before writing to disk. If validation fails, set `status="error"` and explain in `error`/`notes` (still write whatever minimal artifacts you safely can).
-- `page_state.json` MUST be **minimal** and MUST NOT include non-core debug fields like `meta` or `jsonld_raw`. Those frequently contain multiline text or unescaped quotes and can break JSON. If you want to save them, write separate artifacts (e.g. `meta.json`, `jsonld_raw.txt`) without risking the core pipeline.
+- `s0-page_state.json` MUST be **minimal** and MUST NOT include non-core debug fields like `meta` or `jsonld_raw`. Those frequently contain multiline text or unescaped quotes and can break JSON. If you want to save them, write separate artifacts (e.g. `meta.json`, `jsonld_raw.txt`) without risking the core pipeline.
 
-`page_state.json` MUST be a JSON object with at least:
+`s0-page_state.json` MUST be a JSON object with at least:
 ```json
 {
   "url": "string",
@@ -45,7 +45,7 @@ Hard rule (must follow):
 }
 ```
 
-`page.html`: write `document.documentElement.outerHTML` (may be truncated; do not use `...`).
+`s0-page.html`: write `document.documentElement.outerHTML` (may be truncated; do not use `...`).
 
 ## Output (stdout JSON ONLY)
 
@@ -74,6 +74,14 @@ Rules:
 - JSON ONLY. No markdown fences. No extra text.
 - Always include `snapshot_files` keys. If a file could not be produced, set its value to `""` and explain in `notes`.
 - `run_id` and `artifact_dir` MUST be non-empty. Set `artifact_dir` to `out/artifacts/<run_id>`.
+- Standard snapshot filenames under `artifact_dir`:
+  - `s0-snapshot-pointer.json`
+  - `s0-page_state.json`
+  - `s0-page.html`
+  - `s0-overlay_images.json`
+  - `s0-variations.json`
+  - `s0-variation_image_map.json`
+- `snapshot_files` values must point to these standard files (relative names are preferred).
 - If blocked by login/verification/CAPTCHA: `status="needs_manual"` and explain in `notes` (still write whatever artifacts you can).
 - If something is fundamentally broken (cannot navigate / cannot talk to CDP): `status="error"` and explain in `error`.
 
@@ -115,13 +123,13 @@ Rules:
     - `href`, `title`, `readyState`
     - Core candidates: extracted title/description/price/currency (best-effort; if not blocked but missing, set `status="error"`)
     - `outerHTML` of `document.documentElement.outerHTML` (if extremely large, truncate and record `html_truncated=true`)
-    - Optional debug artifacts (NOT inside `page_state.json`):
+    - Optional debug artifacts (NOT inside `s0-page_state.json`):
       - `meta.json`: collect a small map of meta tags (must be valid JSON)
       - `jsonld_raw.txt`: collect each `script[type="application/ld+json"].textContent` as plain text lines (avoid JSON escaping risks)
 11) Write:
-    - `out/artifacts/<run_id>/page.html`  (HTML string; may be truncated)
-    - `out/artifacts/<run_id>/page_state.json` (the compact state object; JSON)
-12) Write `out/artifacts/<run_id>/snapshot.json` containing the **same JSON object** you will print to stdout.
+    - `out/artifacts/<run_id>/s0-page.html`  (HTML string; may be truncated)
+    - `out/artifacts/<run_id>/s0-page_state.json` (the compact state object; JSON)
+12) Write `out/artifacts/<run_id>/s0-snapshot-pointer.json` containing the **same JSON object** you will print to stdout.
 
 ### F) Capture images (overlay modal)
 12) Best-effort open the product image overlay:
@@ -132,20 +140,20 @@ Rules:
    - Collect `img` sources (`currentSrc/src/data-src/data-lazy`)
    - Keep only `susercontent.com/file/`
    - Deduplicate and cap to 20
-14) Write `out/artifacts/<run_id>/overlay_images.json`
+14) Write `out/artifacts/<run_id>/s0-overlay_images.json`
 
 ### G) Capture variations (options)
 15) In ONE `evaluate_script`, find variation option buttons (規格/款式/顏色/樣式):
    - Extract option text (trim, <= 50 chars)
    - Return up to 20 options in DOM order with 0-based `position`
-16) Write `out/artifacts/<run_id>/variations.json`
+16) Write `out/artifacts/<run_id>/s0-variations.json`
 
 ### H) Variation -> image mapping (first 10, best-effort)
 17) For the first 10 variation options:
    - Hover (or click) the option (best-effort)
    - Read the current main image URL (`currentSrc/src/data-src`)
    - If an option fails to map, skip it and continue
-18) Write `out/artifacts/<run_id>/variation_image_map.json`
+18) Write `out/artifacts/<run_id>/s0-variation_image_map.json`
 
 ### I) Close tab
 19) DevTools `close_page` with `pageIdx` (always).

@@ -5,7 +5,7 @@
 本 PRD 定義一個 **skill-native** 的 Shopee 抓取流程：
 
 - Go runner **只呼叫一個 skill**：`shopee-orchestrator-pipeline`
-- stage 編排由 orchestrator skill 內部負責：`S0 -> A -> B -> C -> D`
+- stage 編排由 orchestrator skill 內部負責：`snapshot_capture -> core_extract -> images_extract -> variations_extract -> variation_image_map_extract`
 - 每個 stage 完成後都要落 artifact + 更新 pipeline state
 - 最後由 orchestrator skill merge 成單一最終 JSON，回給 Go 做既有 contract validation 與後續 persistence
 
@@ -27,7 +27,7 @@
 ## 3. Goals
 
 1. 將長輸出拆短，提升 JSON 完整閉合率與 contract 通過率。
-2. 保留 single-navigation：只有 S0 操作真實頁面，後續皆離線解析 artifacts。
+2. 保留 single-navigation：只有 `snapshot_capture`（舊名 S0）操作真實頁面，後續皆離線解析 artifacts。
 3. 提供可追溯的 stage artifacts 與 `_pipeline-state.json`，提升 debug 可觀測性。
 4. 讓 Go runner 職責簡化為「呼叫 orchestrator skill + validate/persist 最終 JSON」。
 
@@ -47,11 +47,11 @@
 
 1. 新增/定義以下 skills：
    - `shopee-orchestrator-pipeline`
-   - `shopee-page-snapshot`（S0，沿用並補齊契約）
-   - `shopee-product-core`（A）
-   - `shopee-product-images`（B）
-   - `shopee-product-variations`（C）
-   - `shopee-variation-image-map`（D）
+   - `shopee-page-snapshot`（stage: `snapshot_capture`，舊名 S0）
+   - `shopee-product-core`（stage: `core_extract`，舊名 A）
+   - `shopee-product-images`（stage: `images_extract`，舊名 B）
+   - `shopee-product-variations`（stage: `variations_extract`，舊名 C）
+   - `shopee-variation-image-map`（stage: `variation_image_map_extract`，舊名 D）
 2. 定義 orchestrator skill 的 stage 執行、artifact 寫入、state 更新、merge 規則。
 3. 定義 runtime flags（可由環境變數注入到 runtime prompt）。
 
@@ -69,8 +69,8 @@
 1. Go runner 對單一 URL 建立一次執行請求。
 2. Go runner 呼叫 `shopee-orchestrator-pipeline`（skill mode）。
 3. orchestrator skill 內部執行：
-   - Stage S0: 產生 snapshot artifacts
-   - Stage A/B/C/D: 依序離線解析並產出 stage artifacts
+   - Stage `snapshot_capture`（舊名 S0）: 產生 snapshot artifacts
+   - Stage `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract`: 依序離線解析並產出 stage artifacts
    - Final merge: 組合最終 contract JSON
 4. Go runner 僅做：
    - JSON 抽取/修復（既有能力）
@@ -82,7 +82,17 @@
 硬規則：
 
 1. 只有 `shopee-page-snapshot` 可以呼叫 chrome-devtools 進行真實頁面互動。
-2. A/B/C/D 僅可讀 `out/artifacts/<run_id>/` 內檔案，不得再開頁。
+2. `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract` 僅可讀 `out/artifacts/<run_id>/` 內檔案，不得再開頁。
+
+## 6.3 Stage Name Mapping
+
+為了避免縮寫模糊，文件與 state key 以 descriptive names 為主：
+
+1. `snapshot_capture`（舊名 `S0`）
+2. `core_extract`（舊名 `A`）
+3. `images_extract`（舊名 `B`）
+4. `variations_extract`（舊名 `C`）
+5. `variation_image_map_extract`（舊名 `D`）
 
 ---
 
@@ -121,14 +131,14 @@
   "url": "https://shopee.tw/...",
   "started_at": "2026-02-09T12:00:00Z",
   "updated_at": "2026-02-09T12:00:30Z",
-  "current_stage": "B",
+  "current_stage": "images_extract",
   "status": "running|completed|needs_manual|error",
   "stages": {
-    "S0": {"status": "completed", "started_at": "...", "ended_at": "...", "error": ""},
-    "A": {"status": "completed", "started_at": "...", "ended_at": "...", "error": ""},
-    "B": {"status": "running", "started_at": "...", "ended_at": "", "error": ""},
-    "C": {"status": "pending", "started_at": "", "ended_at": "", "error": ""},
-    "D": {"status": "pending", "started_at": "", "ended_at": "", "error": ""}
+    "snapshot_capture": {"status": "completed", "started_at": "...", "ended_at": "...", "error": ""},
+    "core_extract": {"status": "completed", "started_at": "...", "ended_at": "...", "error": ""},
+    "images_extract": {"status": "running", "started_at": "...", "ended_at": "", "error": ""},
+    "variations_extract": {"status": "pending", "started_at": "", "ended_at": "", "error": ""},
+    "variation_image_map_extract": {"status": "pending", "started_at": "", "ended_at": "", "error": ""}
   },
   "flags": {
     "images_enabled": true,
@@ -147,7 +157,7 @@
   "run_id": "string",
   "tool": "codex|gemini",
   "orchestrator_skill": "shopee-orchestrator-pipeline",
-  "stage_duration_ms": {"S0": 1200, "A": 80, "B": 60, "C": 40, "D": 110},
+  "stage_duration_ms": {"snapshot_capture": 1200, "core_extract": 80, "images_extract": 60, "variations_extract": 40, "variation_image_map_extract": 110},
   "stage_errors": [],
   "limits": {
     "description_max_chars": 1500,
@@ -162,7 +172,7 @@
 
 ## 8. Stage Specifications
 
-## 8.1 Stage S0: `shopee-page-snapshot`
+## 8.1 Stage `snapshot_capture`（舊名 S0）: `shopee-page-snapshot`
 
 輸入：
 
@@ -181,9 +191,9 @@
 1. 遇 login/captcha/verification 且核心不可見時回 `needs_manual`。
 2. 必須輸出可 parse JSON，不可輸出 markdown/prose。
 
-## 8.2 Stage A: `shopee-product-core`
+## 8.2 Stage `core_extract`（舊名 A）: `shopee-product-core`
 
-輸入：S0 artifacts  
+輸入：`snapshot_capture` artifacts  
 輸出：`a-core.json`
 
 最低欄位：
@@ -203,11 +213,11 @@
 規則：
 
 1. `description` 最長 1500 chars。
-2. A 為 gate：A 非 `ok` 則 pipeline 直接結束（不跑 B/C/D）。
+2. `core_extract` 為 gate：其狀態非 `ok` 則 pipeline 直接結束（不跑 `images_extract`/`variations_extract`/`variation_image_map_extract`）。
 
-## 8.3 Stage B: `shopee-product-images`
+## 8.3 Stage `images_extract`（舊名 B）: `shopee-product-images`
 
-輸入：S0 artifacts  
+輸入：`snapshot_capture` artifacts  
 輸出：`b-images.json`
 
 ```json
@@ -216,9 +226,9 @@
 
 規則：最多 20 張，去重。
 
-## 8.4 Stage C: `shopee-product-variations`
+## 8.4 Stage `variations_extract`（舊名 C）: `shopee-product-variations`
 
-輸入：S0 artifacts  
+輸入：`snapshot_capture` artifacts  
 輸出：`c-variations.json`
 
 ```json
@@ -229,9 +239,9 @@
 
 規則：最多 20 筆。
 
-## 8.5 Stage D: `shopee-variation-image-map`
+## 8.5 Stage `variation_image_map_extract`（舊名 D）: `shopee-variation-image-map`
 
-輸入：S0 artifacts  
+輸入：`snapshot_capture` artifacts  
 輸出：`d-variation-image-map.json`
 
 ```json
@@ -251,16 +261,16 @@
 
 orchestrator skill merge 順序：
 
-1. 以 A(core) 為 base 建立最終物件。
-2. B 成功時覆蓋/填入 `images`，失敗則 `images=[]`。
-3. C 成功時填入 `variations`（若 D 關閉）。
-4. D 成功時用 `{title,position}` 對齊補 `variation.image`；找不到 mapping 時保留無 image。
+1. 以 `core_extract` 結果為 base 建立最終物件。
+2. `images_extract` 成功時覆蓋/填入 `images`，失敗則 `images=[]`。
+3. `variations_extract` 成功時填入 `variations`（若 `variation_image_map_extract` 關閉）。
+4. `variation_image_map_extract` 成功時用 `{title,position}` 對齊補 `variation.image`；找不到 mapping 時保留無 image。
 
 狀態規則：
 
-1. A=`needs_manual` -> final=`needs_manual`（停止）。
-2. A=`error` -> final=`error`（停止）。
-3. A=`ok` 且 B/C/D 任意失敗 -> final 仍可 `ok`（降級）。
+1. `core_extract`=`needs_manual` -> final=`needs_manual`（停止）。
+2. `core_extract`=`error` -> final=`error`（停止）。
+3. `core_extract`=`ok` 且 `images_extract`/`variations_extract`/`variation_image_map_extract` 任意失敗 -> final 仍可 `ok`（降級）。
 
 最終輸出必須符合既有 contract，至少包含：
 
@@ -288,8 +298,8 @@ orchestrator skill merge 順序：
 
 預設策略：
 
-1. orchestrator 啟用時 A/B/C/D 全開。
-2. 允許緊急降載時關閉 C 或 D。
+1. orchestrator 啟用時 `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract` 全開。
+2. 允許緊急降載時關閉 `variations_extract` 或 `variation_image_map_extract`。
 
 ---
 
@@ -315,8 +325,8 @@ orchestrator skill merge 順序：
 ## 12. Acceptance Criteria
 
 1. 最終輸出 JSON 截斷率相較現況顯著下降。
-2. A 成功時，最終輸出始終可解析且通過 contract validation。
-3. B/C/D 任一失敗不會 crash 整筆流程。
+2. `core_extract` 成功時，最終輸出始終可解析且通過 contract validation。
+3. `images_extract`/`variations_extract`/`variation_image_map_extract` 任一失敗不會 crash 整筆流程。
 4. 每次 run 都能在 `out/artifacts/<run_id>/` 找到 stage artifacts 與 `_pipeline-state.json`。
 
 ---
@@ -324,7 +334,7 @@ orchestrator skill merge 順序：
 ## 13. Risks and Mitigations
 
 1. Skill 內「讀另一個 skill」在不同工具支援度不一致。  
-   對策：orchestrator SKILL.md 直接內嵌 stage 規格，必要時把 A/B/C/D 規格同步為 references，避免依賴工具的 skill-to-skill 呼叫能力。
+   對策：orchestrator SKILL.md 直接內嵌 stage 規格，必要時把 `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract` 規格同步為 references，避免依賴工具的 skill-to-skill 呼叫能力。
 
 2. artifacts 體積膨脹。  
    對策：保留 7 天清理，長文本截斷並標記 `*_truncated`。
@@ -344,10 +354,10 @@ orchestrator skill merge 順序：
 
 ## 15. Implementation Checklist
 
-- [ ] 建立 `shopee-orchestrator-pipeline` skill（含 artifact/state 寫入規範）
-- [ ] 建立 A/B/C/D skills（固定短 JSON 輸出）
-- [ ] 對齊 S0 輸出檔名與欄位到本 PRD 契約
-- [ ] 加入 `_pipeline-state.json` 更新規則
-- [ ] 實作 final merge 與降級策略於 orchestrator skill
+- [x] 建立 `shopee-orchestrator-pipeline` skill（含 artifact/state 寫入規範）
+- [x] 建立 `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract` skills（固定短 JSON 輸出）
+- [x] 對齊 `snapshot_capture` 輸出檔名與欄位到本 PRD 契約
+- [x] 加入 `_pipeline-state.json` 更新規則
+- [x] 實作 final merge 與降級策略於 orchestrator skill
 - [ ] 補 smoke test 清單（5-10 URLs）
-- [ ] 更新 README 的 skill mode 指引與部署同步步驟
+- [x] 更新 README 的 skill mode 指引與部署同步步驟
