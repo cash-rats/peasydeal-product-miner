@@ -201,21 +201,46 @@ func buildCrawlResultFromSnapshot(ptr SnapshotPointer, fallbackURL string) (Resu
 	// 1) Core fields from page_state.json.
 	pageStatePath := ptr.filePath(ptr.SnapshotFiles.PageState)
 	if pageStatePath == "" {
-		return nil, fmt.Errorf("missing snapshot_files.page_state")
+		out["status"] = "error"
+		out["error"] = "missing snapshot_files.page_state"
+		out["images"] = []any{}
+		out["variations"] = []any{}
+		return out, nil
 	}
 	pageStateBytes, err := os.ReadFile(pageStatePath)
 	if err != nil {
-		return nil, fmt.Errorf("read page_state: %w", err)
+		out["status"] = "error"
+		out["error"] = fmt.Sprintf("read page_state: %v", err)
+		out["images"] = []any{}
+		out["variations"] = []any{}
+		return out, nil
 	}
 
 	core, err := extractCoreFromPageStateJSON(pageStateBytes)
 	if err != nil {
-		return nil, err
+		// Do not hard-fail the entire crawl. Return a contract-compliant error output.
+		out["status"] = "error"
+		out["error"] = err.Error()
+		out["images"] = []any{}
+		out["variations"] = []any{}
+		return out, nil
 	}
 	out["title"] = core.Title
 	out["description"] = core.Description
 	out["currency"] = core.Currency
 	out["price"] = core.Price
+
+	// If core fields are incomplete, downgrade to error but keep any partial values.
+	if strings.TrimSpace(core.Title) == "" ||
+		strings.TrimSpace(core.Description) == "" ||
+		strings.TrimSpace(core.Currency) == "" ||
+		isEmptyPrice(core.Price) {
+		out["status"] = "error"
+		out["error"] = "core fields missing in page_state.json (title/description/currency/price)"
+		out["images"] = []any{}
+		out["variations"] = []any{}
+		return out, nil
+	}
 
 	// 2) Images from overlay_images.json (optional).
 	imagesPath := ptr.filePath(ptr.SnapshotFiles.OverlayImages)

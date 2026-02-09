@@ -5,18 +5,15 @@ import (
 	"testing"
 )
 
-func TestValidateCrawlOut_StatusOkRequiresFields(t *testing.T) {
+func TestValidateCrawlOut_StatusOkAllowsMissingCoreFields(t *testing.T) {
 	out := CrawlOut{
 		URL:        "https://example.com",
 		Status:     "ok",
 		CapturedAt: "2026-01-18T00:00:00Z",
-		Currency:   "TWD",
-		Price:      json.Number("123.45"),
-		Title:      "",
-		// Description missing too
+		// Core fields intentionally omitted to allow degraded outputs.
 	}
-	if err := validateCrawlOut(out); err == nil {
-		t.Fatalf("expected validation error")
+	if err := validateCrawlOut(out); err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 }
 

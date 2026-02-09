@@ -171,9 +171,15 @@ Orchestrator 會負責把 B/C/D merge 回最終 contract。
 
 ## 9. Rollout 計畫（高層級）
 
-1) 先上線拆分後的 core + images（A+B），variations 先關閉。
-2) 觀測 contract_ok_rate 與 truncation_rate 是否明顯改善。
-3) 再逐步啟用 variations（C），最後才考慮 image mapping（D）。
+決策（2026-02-08）：**A(core) + B(images) + C(variations) + D(variation image map) 一起上線**，但保留 runtime flags 以便在遇到風控/不穩時快速降載。
+
+1) 上線完整 orchestrator pipeline：S0(snapshot) → A → B → C → D（遵守 single-navigation；A/B/C/D 離線解析）。
+2) 設定硬上限與降級策略為預設行為：
+   - `description_max_chars=1500`
+   - `images_max=20`
+   - `variations_max=20`
+   - `variation_image_map_max=10`（單 option 失敗跳過，不影響整體 status）
+3) 觀測 `contract_ok_rate` / `truncation_rate` / `core_ok_rate` 與耗時（P95），並保留快速關閉 D（或 C/D）的開關作為緊急應對。
 
 ## 10. 驗收條件（Acceptance Criteria）
 
@@ -247,7 +253,9 @@ Orchestrator 會負責把 B/C/D merge 回最終 contract。
   - [ ] `SHOPEE_ORCH_VARIATIONS=0/1`
   - [ ] `SHOPEE_ORCH_VARIATION_IMAGE_MAP=0/1`（建議預設 1，但有硬上限）
   - [ ] `SHOPEE_ORCH_VARIATION_IMAGE_MAP_MAX=10`
-- [ ] 確認預設值安全（不設 env 也能跑，且偏向穩定 core）
+- [ ] 確認預設值（2026-02-08 決策）：
+  - [ ] 預設「一起做」：在 orchestrator 啟用時，A/B/C/D 預設皆開（但仍可用 flags 快速關閉 C 或 D）
+  - [ ] 不設 env 也能跑（預設值必須穩定，且在需要時可降級到只跑 core）
 
 ### 11.5 測試（Regression + Contract）
 - [ ] 單元測試：merge 行為（core ok + images fail 仍可 ok）

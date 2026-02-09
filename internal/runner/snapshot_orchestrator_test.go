@@ -145,6 +145,39 @@ func TestBuildCrawlResultFromSnapshot_OK_ArrayArtifactFormats(t *testing.T) {
 	}
 }
 
+func TestBuildCrawlResultFromSnapshot_MissingExtractedCore_DoesNotHardFail(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	// Missing extracted core fields.
+	writeJSON(t, filepath.Join(dir, "page_state.json"), map[string]any{
+		"url": "https://example.com/p/1",
+	})
+
+	ptr := SnapshotPointer{
+		URL:         "https://example.com/p/1",
+		Status:      "ok",
+		CapturedAt:  "2026-01-01T00:00:00Z",
+		RunID:       "r1",
+		ArtifactDir: dir,
+		SnapshotFiles: SnapshotFiles{
+			PageState: "page_state.json",
+		},
+	}
+
+	res, err := buildCrawlResultFromSnapshot(ptr, "")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if res["status"] != "error" {
+		t.Fatalf("expected status=error, got %#v", res["status"])
+	}
+	if _, ok := res["error"].(string); !ok {
+		t.Fatalf("expected error string, got %#v", res["error"])
+	}
+}
+
 func TestSnapshotPointer_filePath_DoesNotDoublePrefixArtifactDir(t *testing.T) {
 	t.Parallel()
 
