@@ -31,7 +31,7 @@ func TestNormalizeOptions_UsesEnvPromptMode(t *testing.T) {
 }
 
 func TestBuildSkillPrompt_Shopee(t *testing.T) {
-	got, err := buildSkillPrompt(source.Shopee, "https://shopee.tw/product/1/2", "", "codex")
+	got, err := buildSkillPrompt(source.Shopee, "https://shopee.tw/product/1/2", "", "codex", "", "out")
 	if err != nil {
 		t.Fatalf("buildSkillPrompt error: %v", err)
 	}
@@ -47,9 +47,29 @@ func TestBuildSkillPrompt_Shopee(t *testing.T) {
 }
 
 func TestBuildSkillPrompt_UnsupportedSource(t *testing.T) {
-	_, err := buildSkillPrompt(source.Taobao, "https://taobao.com/item/1", "", "codex")
+	_, err := buildSkillPrompt(source.Taobao, "https://taobao.com/item/1", "", "codex", "", "out")
 	if err == nil {
 		t.Fatalf("expected error for unsupported source")
+	}
+}
+
+func TestBuildSkillPrompt_WithRunID(t *testing.T) {
+	got, err := buildSkillPrompt(
+		source.Shopee,
+		"https://shopee.tw/product/1/2",
+		"shopee-orchestrator-pipeline",
+		"gemini",
+		"run-123",
+		"out",
+	)
+	if err != nil {
+		t.Fatalf("buildSkillPrompt error: %v", err)
+	}
+	if !strings.Contains(got, "Run ID: run-123") {
+		t.Fatalf("expected run id in prompt, got: %s", got)
+	}
+	if !strings.Contains(got, "Artifact dir: out/artifacts/run-123") {
+		t.Fatalf("expected artifact dir in prompt, got: %s", got)
 	}
 }
 

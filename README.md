@@ -67,22 +67,51 @@ This runs the AMQP worker binary (`/app/worker` from `cmd/worker/main.go`) insid
 
 Canonical skill source (repo):
 
-- `.agents/skills/shopee-product-crawler/SKILL.md`
+- `.agents/skills/shopee-orchestrator-pipeline/SKILL.md`
+- `.agents/skills/shopee-page-snapshot/SKILL.md`
+- `.agents/skills/shopee-product-core/SKILL.md`
+- `.agents/skills/shopee-product-images/SKILL.md`
+- `.agents/skills/shopee-product-variations/SKILL.md`
+- `.agents/skills/shopee-variation-image-map/SKILL.md`
+
+Recommended env for the new snapshot-first pipeline:
+
+```bash
+export CRAWL_PROMPT_MODE=skill
+export CRAWL_SKILL_NAME=shopee-orchestrator-pipeline
+```
+
+Note:
+- If `CRAWL_SKILL_NAME` is not set, runner may still default to `shopee-product-crawler`.
+- Set `CRAWL_SKILL_NAME=shopee-orchestrator-pipeline` explicitly to use the new multi-stage pipeline.
 
 ### Local environment
 
 Codex (workspace skill):
 
-- Run `make dev-once tool=codex url=<shopee_url>` from repo root with `CRAWL_PROMPT_MODE=skill`.
+- Run `make dev-once tool=codex url=<shopee_url>` from repo root with:
+  - `CRAWL_PROMPT_MODE=skill`
+  - `CRAWL_SKILL_NAME=shopee-orchestrator-pipeline`
 
-Gemini (install once for workspace/user):
+Gemini (install once for workspace/user; enable all related skills):
 
 ```bash
-gemini skills install .agents/skills/shopee-product-crawler --scope workspace --consent
-gemini skills enable shopee-product-crawler
+gemini skills install .agents/skills/shopee-orchestrator-pipeline --scope workspace --consent
+gemini skills install .agents/skills/shopee-page-snapshot --scope workspace --consent
+gemini skills install .agents/skills/shopee-product-core --scope workspace --consent
+gemini skills install .agents/skills/shopee-product-images --scope workspace --consent
+gemini skills install .agents/skills/shopee-product-variations --scope workspace --consent
+gemini skills install .agents/skills/shopee-variation-image-map --scope workspace --consent
+
+gemini skills enable shopee-orchestrator-pipeline
+gemini skills enable shopee-page-snapshot
+gemini skills enable shopee-product-core
+gemini skills enable shopee-product-images
+gemini skills enable shopee-product-variations
+gemini skills enable shopee-variation-image-map
 ```
 
-Then run with `CRAWL_PROMPT_MODE=skill`.
+Then run with `CRAWL_PROMPT_MODE=skill` and `CRAWL_SKILL_NAME=shopee-orchestrator-pipeline`.
 
 ### Docker environment
 
@@ -94,14 +123,37 @@ Docker uses mounted tool homes:
 Sync the canonical skill into mounted homes before `docker compose up`:
 
 ```bash
-mkdir -p codex/.codex/skills/shopee-product-crawler
-cp .agents/skills/shopee-product-crawler/SKILL.md codex/.codex/skills/shopee-product-crawler/SKILL.md
+for s in \
+  shopee-orchestrator-pipeline \
+  shopee-page-snapshot \
+  shopee-product-core \
+  shopee-product-images \
+  shopee-product-variations \
+  shopee-variation-image-map
+do
+  mkdir -p "codex/.codex/skills/$s"
+  cp ".agents/skills/$s/SKILL.md" "codex/.codex/skills/$s/SKILL.md"
+done
 
-HOME="$(pwd)/gemini" gemini skills install .agents/skills/shopee-product-crawler --scope user --consent
-HOME="$(pwd)/gemini" gemini skills enable shopee-product-crawler
+for s in \
+  shopee-orchestrator-pipeline \
+  shopee-page-snapshot \
+  shopee-product-core \
+  shopee-product-images \
+  shopee-product-variations \
+  shopee-variation-image-map
+do
+  HOME="$(pwd)/gemini" gemini skills install ".agents/skills/$s" --scope user --consent
+  HOME="$(pwd)/gemini" gemini skills enable "$s"
+done
 ```
 
-Then set `CRAWL_PROMPT_MODE=skill` in `.env` (or environment) for `worker` / `runner`.
+Then set in `.env` (or environment) for `worker` / `runner`:
+
+```bash
+CRAWL_PROMPT_MODE=skill
+CRAWL_SKILL_NAME=shopee-orchestrator-pipeline
+```
 
 ## Remote Worker (host Chrome + auth upload)
 

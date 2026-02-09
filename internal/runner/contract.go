@@ -21,11 +21,12 @@ type CrawlOut struct {
 	Notes string `json:"notes,omitempty" validate:"required_if=Status needs_manual"`
 	Error string `json:"error,omitempty" validate:"required_if=Status error"`
 
-	Title       string `json:"title,omitempty" validate:"required_if=Status ok"`
-	Description string `json:"description,omitempty" validate:"required_if=Status ok"`
-	Currency    string `json:"currency,omitempty" validate:"required_if=Status ok"`
-	Price       any    `json:"price,omitempty" validate:"required_if=Status ok,price"`
-	Images      []any  `json:"images,omitempty"`
+	// Core fields are optional to allow degraded outputs when extraction fails.
+	Title       string      `json:"title,omitempty"`
+	Description string      `json:"description,omitempty"`
+	Currency    string      `json:"currency,omitempty"`
+	Price       any         `json:"price,omitempty" validate:"omitempty,price"`
+	Images      []any       `json:"images,omitempty"`
 	Variations  []Variation `json:"variations,omitempty" validate:"omitempty,dive"`
 }
 
