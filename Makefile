@@ -35,12 +35,13 @@ help:
 	"  make dev-once tool=codex|gemini url=<product_url>  Crawl one URL on the host (fast loop)" \
 	"  make docker-doctor tool=codex|gemini  Check Chrome + tool auth for Docker runs" \
 	"  make docker-once tool=codex|gemini url=<product_url>  Crawl one URL in Docker (parity check)" \
-	"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
-	"  make docker-login tool=codex|gemini  Authorize host tool for the Docker runner" \
-	"  make vnc-tunnel                Open SSH tunnel for VNC (localhost:5901 -> remote:5901)" \
-	"  make ghcr-login               Login to GHCR using GHCR_USER and GHCR_TOKEN from .env" \
-	"  make deploy env=<name> build=1        Deploy to remote server via scripts/deploy.sh" \
-	"  make deploy-justin-static-home-4       Build+push and deploy to justin-static-home-4" \
+		"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
+		"  make docker-login tool=codex|gemini  Authorize host tool for the Docker runner" \
+		"  make skills-install tool=codex|gemini|both  Install repo-tracked skills into user home" \
+		"  make vnc-tunnel                Open SSH tunnel for VNC (localhost:5901 -> remote:5901)" \
+		"  make ghcr-login               Login to GHCR using GHCR_USER and GHCR_TOKEN from .env" \
+		"  make deploy env=<name> build=1        Deploy to remote server via scripts/deploy.sh" \
+		"  make deploy-justin-static-home-4       Build+push and deploy to justin-static-home-4" \
 	"  make deploy-justin-static-home-4-pull  Pull-only deploy to justin-static-home-4" \
 	"  make deploy-devtool-justin-static-home-4  Build+upload devtool to justin-static-home-4" \
 	"  make goose-create name=<migration_name>  Create a goose SQL migration in db/migrations"
@@ -107,6 +108,14 @@ docker-login:
 		gemini) $(MAKE) docker-gemini-login ;; \
 		*) echo "Error: unknown tool '$(tool)' (expected codex or gemini)"; exit 2 ;; \
 	esac
+
+.PHONY: skills-install
+skills-install:
+	@case "$(tool)" in \
+		codex|gemini|both) ;; \
+		*) echo "Error: unknown tool '$(tool)' (expected codex|gemini|both)"; exit 2 ;; \
+	esac
+	./scripts/install-local-skills.sh --tool "$(tool)"
 
 .PHONY: vnc-tunnel
 vnc-tunnel:
