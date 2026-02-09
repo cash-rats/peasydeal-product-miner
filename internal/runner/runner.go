@@ -65,6 +65,7 @@ type Options struct {
 	Tool       string // "codex" or "gemini"
 	PromptMode string `validate:"omitempty,oneof=legacy skill"` // "legacy" (default) or "skill"
 	SkillName  string // optional override; used when PromptMode=skill
+	RunID      string // optional run id for artifact correlation; injected into skill-mode prompt when non-empty
 
 	// Cmd is the binary name/path to execute (e.g. "codex" or "gemini").
 	// If empty, CodexCmd is used for backward compatibility.
@@ -101,6 +102,10 @@ func normalizeOptions(opts Options) Options {
 	opts.SkillName = strings.TrimSpace(opts.SkillName)
 	if opts.SkillName == "" {
 		opts.SkillName = strings.TrimSpace(os.Getenv("CRAWL_SKILL_NAME"))
+	}
+	opts.RunID = strings.TrimSpace(opts.RunID)
+	if opts.RunID == "" {
+		opts.RunID = strings.TrimSpace(os.Getenv("CRAWL_RUN_ID"))
 	}
 	if opts.Tool == "" {
 		opts.Tool = "codex"
@@ -312,7 +317,7 @@ func buildPrompt(opts Options, src source.Source) (string, error) {
 		if opts.PromptFile != "" {
 			return "", fmt.Errorf("prompt_file is not supported when prompt_mode=skill")
 		}
-		return buildSkillPrompt(src, opts.URL, opts.SkillName, opts.Tool)
+		return buildSkillPrompt(src, opts.URL, opts.SkillName, opts.Tool, opts.RunID, opts.OutDir)
 	case promptModeLegacy:
 		return loadPrompt(opts.PromptFile, opts.URL)
 	default:

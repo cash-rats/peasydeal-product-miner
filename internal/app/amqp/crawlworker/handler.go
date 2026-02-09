@@ -78,6 +78,7 @@ func (h *CrawlHandler) Handle(ctx context.Context, msg CrawlRequestedEnvelope) e
 		URL:    url,
 		OutDir: outDir,
 		Tool:   h.cfg.CrawlTool,
+		RunID:  msg.EventID,
 	})
 	if err != nil {
 		h.logger.Errorw("crawlworker_run_crawler_failed",

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -23,6 +24,7 @@ func newOnceCmd() *cobra.Command {
 		tool       string
 		promptMode string
 		skillName  string
+		runID      string
 	)
 
 	cmd := &cobra.Command{
@@ -70,6 +72,7 @@ func newOnceCmd() *cobra.Command {
 							Tool:       tool,
 							PromptMode: promptMode,
 							SkillName:  skillName,
+							RunID:      resolveRunID(runID),
 						},
 					)
 
@@ -105,5 +108,14 @@ func newOnceCmd() *cobra.Command {
 	cmd.Flags().StringVar(&tool, "tool", "codex", "Tool to use (codex or gemini)")
 	cmd.Flags().StringVar(&promptMode, "prompt-mode", "", "Prompt mode: legacy or skill (optional; defaults to CRAWL_PROMPT_MODE or legacy)")
 	cmd.Flags().StringVar(&skillName, "skill-name", "", "Skill name override when --prompt-mode=skill (optional)")
+	cmd.Flags().StringVar(&runID, "run-id", "", "Run ID for artifact correlation (optional; auto-generated when empty)")
 	return cmd
+}
+
+func resolveRunID(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw != "" {
+		return raw
+	}
+	return uuid.NewString()
 }
