@@ -71,7 +71,7 @@ func (h *CrawlHandler) Handle(ctx context.Context, msg CrawlRequestedEnvelope) e
 
 	outDir := strings.TrimSpace(msg.Data.OutDir)
 	if outDir == "" {
-		outDir = "out"
+		outDir = "/out"
 	}
 
 	outPath, result, err := h.runner.RunOnce(runner.Options{

@@ -18,6 +18,7 @@ Your job is to run this exact sequence and persist artifacts after every stage:
 3. `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract` are offline-only: read artifacts from disk, do not open/navigate pages.
 4. Artifact discipline: every stage completion must write its stage artifact and update `_pipeline-state.json`.
 5. Never write placeholder JSON (`...`, `{...}`, `[...]`). Always write valid JSON via structured serialization.
+6. Browser cleanup is mandatory: when pipeline finishes (success/failure), ensure the crawl tab opened during `snapshot_capture` is closed.
 
 ## Required Artifact Directory
 
@@ -115,6 +116,9 @@ Always enforce limits again at final merge.
    - page html -> `s0-page.html`
 4. If snapshot status is `needs_manual`: finalize pipeline with final status `needs_manual`.
 5. If snapshot status is `error`: finalize pipeline with final status `error`.
+6. Enforce tab finalization from snapshot stage:
+   - The tab opened for this crawl must be closed before leaving `snapshot_capture`.
+   - If still open due to an interruption, close it during pipeline finalization.
 
 ### core_extract (A, offline)
 
@@ -222,4 +226,5 @@ Write run diagnostics:
   - record stage error in `_pipeline-state.json` and `meta.json`
   - continue when allowed by degradation policy
 - Never skip writing state/artifact files due to partial failure.
+- Before returning final JSON, run a final browser-tab cleanup check and close any crawl tab left by this run.
 - Do not emit extra text in stdout beyond final JSON.
