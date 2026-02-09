@@ -359,5 +359,6 @@ orchestrator skill merge 順序：
 - [x] 對齊 `snapshot_capture` 輸出檔名與欄位到本 PRD 契約
 - [x] 加入 `_pipeline-state.json` 更新規則
 - [x] 實作 final merge 與降級策略於 orchestrator skill
+- [x] 由 program 提供 `run_id`（worker 使用 `event_id`；dev-once 自動產生 UUID），並注入 skill prompt
 - [ ] 補 smoke test 清單（5-10 URLs）
 - [x] 更新 README 的 skill mode 指引與部署同步步驟
