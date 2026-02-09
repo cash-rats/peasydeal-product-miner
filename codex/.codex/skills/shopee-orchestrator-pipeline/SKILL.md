@@ -82,11 +82,11 @@ Shape:
 
 For stage methodology, read and follow these skill specs in this repo:
 
-- `snapshot_capture`: `.agents/skills/shopee-page-snapshot/SKILL.md`
-- `core_extract`: `.agents/skills/shopee-product-core/SKILL.md`
-- `images_extract`: `.agents/skills/shopee-product-images/SKILL.md`
-- `variations_extract`: `.agents/skills/shopee-product-variations/SKILL.md`
-- `variation_image_map_extract`: `.agents/skills/shopee-variation-image-map/SKILL.md`
+- `snapshot_capture`: `codex/.codex/skills/shopee-page-snapshot/SKILL.md`
+- `core_extract`: `codex/.codex/skills/shopee-product-core/SKILL.md`
+- `images_extract`: `codex/.codex/skills/shopee-product-images/SKILL.md`
+- `variations_extract`: `codex/.codex/skills/shopee-product-variations/SKILL.md`
+- `variation_image_map_extract`: `codex/.codex/skills/shopee-variation-image-map/SKILL.md`
 
 If downstream skill files are missing, continue with best-effort offline parsing from snapshot artifacts and record fallback usage in `meta.json`.
 
