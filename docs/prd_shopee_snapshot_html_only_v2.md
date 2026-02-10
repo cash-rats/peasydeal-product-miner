@@ -129,3 +129,64 @@ Notes:
    - blocked/login wall page
    - missing overlay or missing variation edge cases
 6. Update pipeline docs and runbook
+
+## 13. Implementation Progress (Handoff)
+
+Date context: updated on 2026-02-10 (local workspace).
+
+### 13.1 Completed
+
+1. S0 HTML snapshot helper implemented:
+   - `scripts/cdp_snapshot_html.py` (CDP HTML capture; supports `.html`/`.html.gz`)
+   - unit tests: `scripts/tests/test_cdp_snapshot_html.py`
+2. Skill-local script copies added for S0:
+   - `codex/.codex/skills/shopee-page-snapshot/scripts/cdp_snapshot_html.py`
+   - `gemini/.gemini/skills/shopee-page-snapshot/scripts/cdp_snapshot_html.py`
+3. Codex skills installer fixed to copy full skill directories (not `SKILL.md` only):
+   - `scripts/install-local-skills.sh`
+4. Downstream HTML-offline extractors implemented (all write stage JSON artifacts):
+   - core: `extract_core_from_html.py` -> `core_extract.json`
+   - images: `extract_images_from_html.py` -> `images_extract.json`
+   - variations: `extract_variations_from_html.py` -> `variations_extract.json`
+   - variation-image-map: `extract_variation_image_map_from_html.py` -> `variation_image_map_extract.json`
+5. Orchestrator skill spec aligned to HTML artifact contracts:
+   - stage inputs now based on `s0-*.html.gz` + `s0-manifest.json`
+   - stage outputs merged from `core_extract.json` / `images_extract.json` / `variations_extract.json` / `variation_image_map_extract.json`
+
+### 13.2 Verified Run (Reference)
+
+Reference run used for verification:
+- `out/artifacts/20260210T071202Z-o7aor5/`
+
+Verified artifacts present:
+- `s0-initial.html.gz`
+- `s0-overlay.html.gz`
+- `s0-variation-0..9.html.gz`
+- `s0-manifest.json`
+- `s0-snapshot-pointer.json`
+- `core_extract.json`
+- `images_extract.json`
+- `variations_extract.json`
+- `variation_image_map_extract.json`
+
+### 13.3 Commit Trail (chronological)
+
+1. `8f829e8` feat(skills): add html snapshot pipeline and core html.gz extraction
+2. `3febfe4` feat(skills): add html.gz-based images extraction artifact output
+3. `516b709` feat(skills): add html.gz variation extraction and tighten variation image mapping
+4. `c5c848b` chore(skills): align orchestrator pipeline with html artifact contracts
+
+### 13.4 Important Notes for Next Agent
+
+1. `make skills-install tool=both` can fail if any gemini skill frontmatter is malformed.
+   - Current repo state includes fixes for previously failing files (`shopee-product-images`, `shopee-variation-image-map`).
+2. Variation image mapping was intentionally narrowed to main product image scope to avoid unrelated global page images.
+3. Some Shopee products genuinely have identical main image across variations; this is expected and should not be treated as extraction failure.
+
+### 13.5 Remaining Work
+
+1. Run one end-to-end orchestrator execution and persist `final.json` from orchestrator itself (not only per-stage manual runs).
+2. Add regression fixtures and smoke tests for:
+   - no-variation products
+   - products with true variation-specific images
+   - blocked/captcha flows (`needs_manual`)
