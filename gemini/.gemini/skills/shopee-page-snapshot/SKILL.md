@@ -13,7 +13,7 @@ Goal: perform **exactly one** browsing session to capture all state needed for d
 - variations (options text, limited)
 - variation -> images mapping for **first 10** options (best-effort; failures skipped)
 
-Important: the final stdout must be **a small JSON object only**. All large data (HTML, JSON-LD, DOM dumps) must be written to files under `out/artifacts/<run_id>/` (repo-relative; works on host and in Docker where `/app/out` maps to `/out`).
+Important: the final stdout must be **a small JSON object only**. Structured JSON artifacts must be written to files under `out/artifacts/<run_id>/` (repo-relative; works on host and in Docker where `/app/out` maps to `/out`).
 
 ## Artifact file contracts (must be valid JSON / real data)
 
@@ -45,13 +45,6 @@ Hard rule (must follow):
 }
 ```
 
-`s0-page.html`: write `document.documentElement.outerHTML` (may be truncated; do not use `...`).
-
-Hard guard for `s0-page.html`:
-- Do NOT write placeholder text like `... truncated ...` or any artificial ellipsis markers as the HTML payload.
-- If truncation is unavoidable, keep real HTML content segments only and record truncation via metadata flags.
-- `s0-page.html` is for debug/audit only; downstream extractors must rely on structured JSON artifacts.
-
 ## Output (stdout JSON ONLY)
 
 Return EXACTLY ONE JSON object with this shape:
@@ -64,7 +57,6 @@ Return EXACTLY ONE JSON object with this shape:
   "artifact_dir": "string",
   "snapshot_files": {
     "snapshot": "string",
-    "page_html": "string",
     "page_state": "string",
     "overlay_images": "string",
     "variations": "string",
@@ -82,7 +74,6 @@ Rules:
 - Standard snapshot filenames under `artifact_dir`:
   - `s0-snapshot-pointer.json`
   - `s0-page_state.json`
-  - `s0-page.html`
   - `s0-overlay_images.json`
   - `s0-variations.json`
   - `s0-variation_image_map.json`
@@ -124,15 +115,13 @@ Rules:
 ### E) Capture page state (write artifacts)
 8) Generate `run_id` (UTC timestamp + short random suffix).
 9) Set `artifact_dir = out/artifacts/<run_id>` and ensure the directory exists (use file tools).
-10) In ONE `evaluate_script`, collect a **minimal** `page_state` object and (separately) `outerHTML`:
+10) In ONE `evaluate_script`, collect a **minimal** `page_state` object:
     - `href`, `title`, `readyState`
     - Core candidates: extracted title/description/price/currency (best-effort; if not blocked but missing, set `status="error"`)
-    - `outerHTML` of `document.documentElement.outerHTML` (if extremely large, truncate and record `html_truncated=true`)
     - Optional debug artifacts (NOT inside `s0-page_state.json`):
       - `meta.json`: collect a small map of meta tags (must be valid JSON)
       - `jsonld_raw.txt`: collect each `script[type="application/ld+json"].textContent` as plain text lines (avoid JSON escaping risks)
 11) Write:
-    - `out/artifacts/<run_id>/s0-page.html`  (HTML string; may be truncated)
     - `out/artifacts/<run_id>/s0-page_state.json` (the compact state object; JSON)
 12) Write `out/artifacts/<run_id>/s0-snapshot-pointer.json` containing the **same JSON object** you will print to stdout.
 

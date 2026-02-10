@@ -19,7 +19,7 @@ Your job is to run this exact sequence and persist artifacts after every stage:
 4. Artifact discipline: every stage completion must write its stage artifact and update `_pipeline-state.json`.
 5. Never write placeholder JSON (`...`, `{...}`, `[...]`). Always write valid JSON via structured serialization.
 6. Browser cleanup is mandatory: when pipeline finishes (success/failure), ensure the crawl tab opened during `snapshot_capture` is closed.
-7. JSON-only parsing for A/B/C/D: `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract` must analyze S0 structured JSON artifacts only. Do NOT parse `s0-page.html`.
+7. JSON-only parsing for A/B/C/D: `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract` must analyze S0 structured JSON artifacts only.
 
 ## Required Artifact Directory
 
@@ -35,7 +35,6 @@ Required files:
 - `out/artifacts/<run_id>/_pipeline-state.json`
 - `out/artifacts/<run_id>/s0-snapshot-pointer.json`
 - `out/artifacts/<run_id>/s0-page_state.json`
-- `out/artifacts/<run_id>/s0-page.html`
 - `out/artifacts/<run_id>/a-core.json`
 - `out/artifacts/<run_id>/b-images.json`
 - `out/artifacts/<run_id>/c-variations.json`
@@ -128,8 +127,6 @@ Always enforce limits again at final merge.
 3. Persist snapshot outputs:
    - pointer -> `s0-snapshot-pointer.json`
    - page state -> `s0-page_state.json`
-   - page html -> `s0-page.html`
-   - `s0-page.html` is debug-only and must not be used by downstream A/B/C/D extraction logic.
 4. If snapshot status is `needs_manual`: finalize pipeline with final status `needs_manual`.
 5. If snapshot status is `error`: finalize pipeline with final status `error`.
 6. Enforce tab finalization from snapshot stage:
