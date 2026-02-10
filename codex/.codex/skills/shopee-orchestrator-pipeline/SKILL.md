@@ -194,7 +194,7 @@ Return exactly one JSON object:
   "currency": "string",
   "price": "number|string",
   "images": ["string"],
-  "variations": [{"title":"string","position":0,"images":["string"],"image":"string"}],
+  "variations": [{"title":"string","position":0,"images":["string"]}],
   "artifact_dir": "out/artifacts/<run_id>",
   "run_id": "string"
 }
@@ -204,7 +204,6 @@ Rules:
 
 - Always include `images` and `variations` (use `[]` when empty).
 - Each variation item should include `images` (use `[]` when empty).
-- During migration, legacy `image` may be included and should be consistent with `images[0]`.
 - `status=ok` requires core fields (`title/description/currency/price`).
 - `status=needs_manual` requires non-empty `notes`.
 - `status=error` requires non-empty `error`.

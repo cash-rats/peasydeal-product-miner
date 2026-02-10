@@ -157,7 +157,6 @@ Rules:
    - `title` (string)
    - `position` (0-based int)
    - `images` (string array; may be empty)
-   - During migration you may also include legacy `image` as `images[0]`
 
 ### I) Close tab
 19) DevTools `close_page` with `pageIdx` (always).

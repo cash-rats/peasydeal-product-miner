@@ -72,8 +72,8 @@ func TestNormalizeResult_VariationsLegacyImageBackfilledToImages(t *testing.T) {
 	if len(images) != 1 || images[0] != "https://img/v0" {
 		t.Fatalf("unexpected images: %#v", images)
 	}
-	if obj["image"] != "https://img/v0" {
-		t.Fatalf("unexpected image: %#v", obj["image"])
+	if _, ok := obj["image"]; ok {
+		t.Fatalf("legacy image key should be removed: %#v", obj["image"])
 	}
 }
 
@@ -99,7 +99,33 @@ func TestNormalizeResult_VariationsImagesDedupeAndCanonicalImage(t *testing.T) {
 	if len(images) != 2 || images[0] != "https://img/v0-1" || images[1] != "https://img/v0-2" {
 		t.Fatalf("unexpected images: %#v", images)
 	}
-	if obj["image"] != "https://img/v0-1" {
-		t.Fatalf("unexpected canonical image: %#v", obj["image"])
+	if _, ok := obj["image"]; ok {
+		t.Fatalf("legacy image key should be removed: %#v", obj["image"])
+	}
+}
+
+func TestNormalizeResult_VariationsAlwaysHaveImagesKey(t *testing.T) {
+	r := Result{
+		"url":    "https://example.com",
+		"status": "ok",
+		"variations": []any{
+			map[string]any{
+				"title":    "v1",
+				"position": 1,
+				"image":    nil,
+			},
+		},
+	}
+
+	normalizeResult(r)
+
+	vars := r["variations"].([]any)
+	obj := vars[0].(map[string]any)
+	images, ok := obj["images"].([]string)
+	if !ok {
+		t.Fatalf("expected []string images, got %#v", obj["images"])
+	}
+	if len(images) != 0 {
+		t.Fatalf("expected empty images, got %#v", images)
 	}
 }

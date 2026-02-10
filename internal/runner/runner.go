@@ -150,13 +150,8 @@ func normalizeVariationImages(res Result) {
 		}
 
 		images := collectVariationImages(obj)
-		if len(images) == 0 {
-			continue
-		}
-
 		obj["images"] = images
-		// Keep a legacy single-image field during migration.
-		obj["image"] = images[0]
+		delete(obj, "image")
 		vars[i] = obj
 	}
 
