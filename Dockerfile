@@ -27,7 +27,7 @@ COPY --from=build /out/worker /app/worker
 COPY --from=build /out/devtool /app/devtool
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates curl \
+  && apt-get install -y --no-install-recommends ca-certificates curl python3 \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Codex and Gemini CLI inside the image (requires network access during build).
