@@ -67,14 +67,16 @@ install_codex() {
   mkdir -p "$dst_base"
 
   for s in "${skills[@]}"; do
-    local src="${CODEX_SKILLS_DIR}/${s}/SKILL.md"
+    local src_dir="${CODEX_SKILLS_DIR}/${s}"
+    local src="${src_dir}/SKILL.md"
     local dst_dir="${dst_base}/${s}"
     if [[ ! -f "$src" ]]; then
       echo "Skip Codex skill without SKILL.md: ${s}" >&2
       continue
     fi
+    rm -rf "$dst_dir"
     mkdir -p "$dst_dir"
-    cp "$src" "${dst_dir}/SKILL.md"
+    cp -R "${src_dir}/." "$dst_dir/"
     echo "Installed Codex skill: ${s}"
   done
 }
