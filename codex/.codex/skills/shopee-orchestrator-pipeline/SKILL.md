@@ -80,13 +80,19 @@ Shape:
 
 ## Stage Skills to Follow
 
-For stage methodology, read and follow these skill specs in this repo:
+For stage methodology, read and follow these skill specs. For each stage skill, resolve the first existing path in this order:
 
-- `snapshot_capture`: `codex/.codex/skills/shopee-page-snapshot/SKILL.md`
-- `core_extract`: `codex/.codex/skills/shopee-product-core/SKILL.md`
-- `images_extract`: `codex/.codex/skills/shopee-product-images/SKILL.md`
-- `variations_extract`: `codex/.codex/skills/shopee-product-variations/SKILL.md`
-- `variation_image_map_extract`: `codex/.codex/skills/shopee-variation-image-map/SKILL.md`
+1. `$HOME/.codex/skills/<skill_name>/SKILL.md`
+2. `/codex/.codex/skills/<skill_name>/SKILL.md`
+3. `codex/.codex/skills/<skill_name>/SKILL.md` (repo-relative)
+
+Stage to skill mapping:
+
+- `snapshot_capture`: `shopee-page-snapshot`
+- `core_extract`: `shopee-product-core`
+- `images_extract`: `shopee-product-images`
+- `variations_extract`: `shopee-product-variations`
+- `variation_image_map_extract`: `shopee-variation-image-map`
 
 If downstream skill files are missing, continue with best-effort offline parsing from snapshot artifacts and record fallback usage in `meta.json`.
 
