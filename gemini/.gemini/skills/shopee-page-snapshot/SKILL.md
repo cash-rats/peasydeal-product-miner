@@ -47,6 +47,11 @@ Hard rule (must follow):
 
 `s0-page.html`: write `document.documentElement.outerHTML` (may be truncated; do not use `...`).
 
+Hard guard for `s0-page.html`:
+- Do NOT write placeholder text like `... truncated ...` or any artificial ellipsis markers as the HTML payload.
+- If truncation is unavoidable, keep real HTML content segments only and record truncation via metadata flags.
+- `s0-page.html` is for debug/audit only; downstream extractors must rely on structured JSON artifacts.
+
 ## Output (stdout JSON ONLY)
 
 Return EXACTLY ONE JSON object with this shape:

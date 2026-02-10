@@ -15,13 +15,13 @@ Runtime prompt must provide either:
 - explicit path(s) for variation-related snapshot files
 
 Do not open/navigate browser pages in this skill.
+Do not parse HTML artifacts in this skill.
 
 ## Required behavior
 
 1. Read variation artifacts from snapshot stage, preferred order:
    - `s0-variations.json` (fallback: `variations.json`)
    - variation-like data in `s0-page_state.json`
-   - fallback parse from `s0-page.html` (fallback: `page.html`) if needed
 2. Normalize each option to:
    - `title` (non-empty string)
    - `position` (0-based integer)

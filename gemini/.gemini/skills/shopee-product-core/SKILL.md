@@ -15,6 +15,7 @@ Runtime prompt must provide either:
 - explicit paths for `s0-page_state.json` (and optional `s0-snapshot-pointer.json`)
 
 Do not open/navigate browser pages in this skill.
+Do not parse HTML artifacts in this skill.
 
 ## Required behavior
 

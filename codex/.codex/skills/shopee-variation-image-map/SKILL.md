@@ -15,6 +15,7 @@ Runtime prompt must provide either:
 - explicit path(s) for mapping-related snapshot files
 
 Do not open/navigate browser pages in this skill.
+Do not parse HTML artifacts in this skill.
 
 ## Required behavior
 

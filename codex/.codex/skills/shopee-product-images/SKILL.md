@@ -15,13 +15,13 @@ Runtime prompt must provide either:
 - explicit path(s) for image-related snapshot files
 
 Do not open/navigate browser pages in this skill.
+Do not parse HTML artifacts in this skill.
 
 ## Required behavior
 
 1. Read image artifacts from snapshot stage, preferred order:
    - `s0-overlay_images.json` (fallback: `overlay_images.json`)
    - image fields inside `s0-page_state.json` if present
-   - fallback parse from `s0-page.html` (fallback: `page.html`) if needed
 2. Keep only HTTP/HTTPS URLs.
 3. Deduplicate URLs.
 4. Enforce hard max = 20 images.
