@@ -7,19 +7,19 @@ description: Run the full Shopee snapshot-first pipeline (snapshot_capture->core
 
 You are a pipeline orchestrator for Shopee product crawling.
 
-Your job is to run this exact sequence and persist artifacts after every stage:
+Run this exact sequence:
 
 `snapshot_capture (S0) -> core_extract (A) -> images_extract (B) -> variations_extract (C) -> variation_image_map_extract (D) -> final_merge`
 
 ## Critical Rules
 
-1. JSON-only final output: return exactly one JSON object, no markdown/prose.
-2. Single-navigation: only `snapshot_capture` may operate the real page via Chrome DevTools.
-3. `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract` are offline-only: read artifacts from disk, do not open/navigate pages.
-4. Artifact discipline: every stage completion must write its stage artifact and update `_pipeline-state.json`.
-5. Never write placeholder JSON (`...`, `{...}`, `[...]`). Always write valid JSON via structured serialization.
-6. Browser cleanup is mandatory: when pipeline finishes (success/failure), ensure the crawl tab opened during `snapshot_capture` is closed.
-7. JSON-only parsing for A/B/C/D: `core_extract`/`images_extract`/`variations_extract`/`variation_image_map_extract` must analyze S0 structured JSON artifacts only.
+1. Final stdout must be exactly one JSON object (no markdown/prose).
+2. Only `snapshot_capture` may use browser interaction.
+3. `core_extract` / `images_extract` / `variations_extract` / `variation_image_map_extract` are offline-only and must read artifacts from disk.
+4. Every stage must persist its stage artifact and update `_pipeline-state.json`.
+5. Always write valid JSON objects. Never use placeholder JSON.
+6. Ensure crawl tab cleanup before pipeline exit.
+7. A/B/C/D must parse HTML-based artifacts from S0 (not legacy `s0-page_state.json`).
 
 ## Required Artifact Directory
 
@@ -27,22 +27,22 @@ Create one run directory:
 
 `out/artifacts/<run_id>/`
 
-`run_id` should be deterministic and traceable, for example:
-`YYYYMMDDThhmmssZ_<short_hash_or_rand>`
-
 Required files:
 
-- `out/artifacts/<run_id>/_pipeline-state.json`
-- `out/artifacts/<run_id>/s0-snapshot-pointer.json`
-- `out/artifacts/<run_id>/s0-page_state.json`
-- `out/artifacts/<run_id>/a-core.json`
-- `out/artifacts/<run_id>/b-images.json`
-- `out/artifacts/<run_id>/c-variations.json`
-- `out/artifacts/<run_id>/d-variation-image-map.json`
-- `out/artifacts/<run_id>/final.json`
-- `out/artifacts/<run_id>/meta.json`
+- `_pipeline-state.json`
+- `s0-snapshot-pointer.json`
+- `s0-manifest.json`
+- `s0-initial.html.gz`
+- `s0-overlay.html.gz` (best-effort)
+- `s0-variation-<position>.html.gz` (best-effort, first 10)
+- `core_extract.json`
+- `images_extract.json`
+- `variations_extract.json`
+- `variation_image_map_extract.json`
+- `final.json`
+- `meta.json`
 
-If a stage is skipped/disabled/failed, still write that stage file with an empty-but-valid object and an explanatory status.
+If a stage fails/skips, still write a valid stage artifact with status/error fields.
 
 ## Pipeline State Contract
 
@@ -80,13 +80,13 @@ Shape:
 
 ## Stage Skills to Follow
 
-For stage methodology, read and follow these skill specs. For each stage skill, resolve the first existing path in this order:
+Resolve stage skill file by first existing path:
 
 1. `$HOME/.codex/skills/<skill_name>/SKILL.md`
 2. `/codex/.codex/skills/<skill_name>/SKILL.md`
-3. `codex/.codex/skills/<skill_name>/SKILL.md` (repo-relative)
+3. `codex/.codex/skills/<skill_name>/SKILL.md`
 
-Stage to skill mapping:
+Stage mapping:
 
 - `snapshot_capture`: `shopee-page-snapshot`
 - `core_extract`: `shopee-product-core`
@@ -94,88 +94,78 @@ Stage to skill mapping:
 - `variations_extract`: `shopee-product-variations`
 - `variation_image_map_extract`: `shopee-variation-image-map`
 
-If any required stage skill file is missing, do NOT continue.
-You MUST fail fast:
+If any required stage skill file is missing, fail fast:
 
-1. set pipeline status to `error`
-2. write `_pipeline-state.json` with missing-skill error details
-3. write `final.json` with `status="error"` and non-empty `error`
+1. set pipeline status=`error`
+2. write `_pipeline-state.json` with missing-skill details
+3. write `final.json` with non-empty `error`
 4. return final JSON immediately
 
-Include which skill was missing and all attempted paths in `error`.
+## Runtime Limits
 
-## Runtime Flags
+Defaults:
 
-Use runtime prompt values or defaults:
+- `description_max_chars = 1500`
+- `images_max = 20`
+- `variations_max = 20`
+- `variation_image_map_max = 10`
+- `images_enabled = true`
+- `variations_enabled = true`
+- `variation_image_map_enabled = true`
 
-- `description_max_chars` default `1500`
-- `images_max` default `20`
-- `variations_max` default `20`
-- `variation_image_map_max` default `10`
-- `images_enabled` default `true`
-- `variations_enabled` default `true`
-- `variation_image_map_enabled` default `true`
-
-Always enforce limits again at final merge.
+Enforce limits again at final merge.
 
 ## Stage Execution Requirements
 
 ### snapshot_capture (S0)
 
-1. Start stage `snapshot_capture` in `_pipeline-state.json`.
-2. Execute snapshot behavior using `shopee-page-snapshot` rules.
-3. Persist snapshot outputs:
-   - pointer -> `s0-snapshot-pointer.json`
-   - page state -> `s0-page_state.json`
-4. If snapshot status is `needs_manual`: finalize pipeline with final status `needs_manual`.
-5. If snapshot status is `error`: finalize pipeline with final status `error`.
-6. Enforce tab finalization from snapshot stage:
-   - The tab opened for this crawl must be closed before leaving `snapshot_capture`.
-   - If still open due to an interruption, close it during pipeline finalization.
+1. Start stage `snapshot_capture`.
+2. Execute `shopee-page-snapshot`.
+3. Persist snapshot outputs (`s0-snapshot-pointer.json`, `s0-manifest.json`, html snapshots).
+4. If `status=needs_manual`: finalize pipeline with `needs_manual`.
+5. If `status=error`: finalize pipeline with `error`.
+6. Ensure crawl tab is closed before leaving stage.
 
 ### core_extract (A, offline)
 
 1. Start stage `core_extract`.
-2. Parse snapshot artifacts for `title`, `description`, `currency`, `price`, `status`.
-3. Write `a-core.json`.
+2. Run `shopee-product-core` against `artifact_dir`.
+3. Write `core_extract.json`.
 4. Gate rule:
-   - `core_extract=needs_manual` -> stop pipeline, final=`needs_manual`
-   - `core_extract=error` -> stop pipeline, final=`error`
-   - `core_extract=ok` -> continue
+   - `needs_manual` => stop pipeline with `needs_manual`
+   - `error` => stop pipeline with `error`
+   - `ok` => continue
 
 ### images_extract (B, offline)
 
 1. Start stage `images_extract`.
-2. Extract image URLs from snapshot artifacts.
-3. Deduplicate and cap by `images_max`.
-4. Write `b-images.json`.
-5. On failure: do not fail whole pipeline; write error note and continue.
+2. Run `shopee-product-images` against `artifact_dir`.
+3. Write `images_extract.json`.
+4. On failure: keep degraded output and continue.
 
 ### variations_extract (C, offline)
 
 1. Start stage `variations_extract`.
-2. Extract variation options (`title`, `position`) from snapshot artifacts.
-3. Cap by `variations_max`.
-4. Write `c-variations.json`.
-5. On failure: do not fail whole pipeline; write error note and continue.
+2. Run `shopee-product-variations` against `artifact_dir`.
+3. Write `variations_extract.json`.
+4. On failure: keep degraded output and continue.
 
 ### variation_image_map_extract (D, offline)
 
 1. Start stage `variation_image_map_extract`.
-2. Best-effort map variation -> images from snapshot artifacts.
-3. Process at most `variation_image_map_max` options.
-4. Single option failure must be skipped, not hard-fail stage.
-5. Write `d-variation-image-map.json`.
+2. Run `shopee-variation-image-map` against `artifact_dir`.
+3. Write `variation_image_map_extract.json`.
+4. On failure: keep degraded output and continue.
 
 ## Merge Rules
 
-Build final output from `core_extract` as base, then merge:
+Build final output from `core_extract.json` as base:
 
-1. Base from `core_extract` (`status/url/captured_at/title/description/currency/price`).
-2. Merge `images_extract` into `images`.
-3. Merge `variations_extract` into `variations`.
-4. Merge `variation_image_map_extract` by matching `title` + `position` and attach `images`.
-5. If non-core stages fail, keep degraded output (`images=[]`, `variations=[]` or partial) and keep final `status="ok"` when `core_extract=ok`.
+1. Base fields from `core_extract.json`: `status,title,description,currency,price`.
+2. Merge `images_extract.json.images` into `images` (dedupe, cap `images_max`).
+3. Merge `variations_extract.json.variations` into `variations` (cap `variations_max`).
+4. Merge `variation_image_map_extract.json.variations` by (`title`,`position`) and attach `images` per variation.
+5. If B/C/D fail but A is `ok`, keep final `status="ok"` with degraded arrays.
 
 ## Final Output Contract
 
@@ -201,16 +191,16 @@ Return exactly one JSON object:
 
 Rules:
 
-- Always include `images` and `variations` (use `[]` when empty).
-- Each variation item should include `images` (use `[]` when empty).
-- `status=ok` requires core fields (`title/description/currency/price`).
+- Always include `images` and `variations`.
+- Every variation item must include `images` (use `[]` when empty).
+- `status=ok` requires core fields.
 - `status=needs_manual` requires non-empty `notes`.
 - `status=error` requires non-empty `error`.
-- Save this same object to `final.json` before printing.
+- Save the same object to `final.json` before printing.
 
 ## meta.json
 
-Write run diagnostics:
+Write diagnostics:
 
 ```json
 {
@@ -236,10 +226,8 @@ Write run diagnostics:
 
 ## Recovery Rules
 
-- If any JSON artifact decode fails, do not crash silently:
-  - record stage error in `_pipeline-state.json` and `meta.json`
-  - continue when allowed by degradation policy
-- Missing stage skill files are NOT degradable failures: treat as fatal `status="error"` and stop.
-- Never skip writing state/artifact files due to partial failure.
-- Before returning final JSON, run a final browser-tab cleanup check and close any crawl tab left by this run.
-- Do not emit extra text in stdout beyond final JSON.
+- If JSON decode fails, record stage error in `_pipeline-state.json` + `meta.json`, then continue only when degradation policy allows.
+- Missing stage skill file is fatal (`status=error`).
+- Never skip writing state/artifact files after partial failures.
+- Before returning final JSON, perform final crawl-tab cleanup.
+- Do not print any extra text beyond final JSON.
