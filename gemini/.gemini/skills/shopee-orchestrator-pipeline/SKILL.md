@@ -94,7 +94,15 @@ Stage to skill mapping:
 - `variations_extract`: `shopee-product-variations`
 - `variation_image_map_extract`: `shopee-variation-image-map`
 
-If downstream skill files are missing, continue with best-effort offline parsing from snapshot artifacts and record fallback usage in `meta.json`.
+If any required stage skill file is missing, do NOT continue.
+You MUST fail fast:
+
+1. set pipeline status to `error`
+2. write `_pipeline-state.json` with missing-skill error details
+3. write `final.json` with `status="error"` and non-empty `error`
+4. return final JSON immediately
+
+Include which skill was missing and all attempted paths in `error`.
 
 ## Runtime Flags
 
@@ -155,7 +163,7 @@ Always enforce limits again at final merge.
 ### variation_image_map_extract (D, offline)
 
 1. Start stage `variation_image_map_extract`.
-2. Best-effort map variation -> image from snapshot artifacts.
+2. Best-effort map variation -> images from snapshot artifacts.
 3. Process at most `variation_image_map_max` options.
 4. Single option failure must be skipped, not hard-fail stage.
 5. Write `d-variation-image-map.json`.
@@ -167,7 +175,7 @@ Build final output from `core_extract` as base, then merge:
 1. Base from `core_extract` (`status/url/captured_at/title/description/currency/price`).
 2. Merge `images_extract` into `images`.
 3. Merge `variations_extract` into `variations`.
-4. Merge `variation_image_map_extract` by matching `title` + `position`.
+4. Merge `variation_image_map_extract` by matching `title` + `position` and attach `images`.
 5. If non-core stages fail, keep degraded output (`images=[]`, `variations=[]` or partial) and keep final `status="ok"` when `core_extract=ok`.
 
 ## Final Output Contract
@@ -186,7 +194,7 @@ Return exactly one JSON object:
   "currency": "string",
   "price": "number|string",
   "images": ["string"],
-  "variations": [{"title":"string","position":0,"image":"string"}],
+  "variations": [{"title":"string","position":0,"images":["string"],"image":"string"}],
   "artifact_dir": "out/artifacts/<run_id>",
   "run_id": "string"
 }
@@ -195,6 +203,8 @@ Return exactly one JSON object:
 Rules:
 
 - Always include `images` and `variations` (use `[]` when empty).
+- Each variation item should include `images` (use `[]` when empty).
+- During migration, legacy `image` may be included and should be consistent with `images[0]`.
 - `status=ok` requires core fields (`title/description/currency/price`).
 - `status=needs_manual` requires non-empty `notes`.
 - `status=error` requires non-empty `error`.
@@ -231,6 +241,7 @@ Write run diagnostics:
 - If any JSON artifact decode fails, do not crash silently:
   - record stage error in `_pipeline-state.json` and `meta.json`
   - continue when allowed by degradation policy
+- Missing stage skill files are NOT degradable failures: treat as fatal `status="error"` and stop.
 - Never skip writing state/artifact files due to partial failure.
 - Before returning final JSON, run a final browser-tab cleanup check and close any crawl tab left by this run.
 - Do not emit extra text in stdout beyond final JSON.

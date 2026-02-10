@@ -33,7 +33,9 @@ type CrawlOut struct {
 type Variation struct {
 	Title    string `json:"title" validate:"required"`
 	Position int    `json:"position" validate:"min=0"`
-	Image    string `json:"image,omitempty"`
+	// Phase 1 compatibility: accept both legacy `image` and new `images`.
+	Image  string   `json:"image,omitempty"`
+	Images []string `json:"images,omitempty"`
 }
 
 func validateCrawlOut(out CrawlOut) error {

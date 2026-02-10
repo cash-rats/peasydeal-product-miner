@@ -128,6 +128,76 @@ func normalizeResult(res Result) {
 			delete(res, "price")
 		}
 	}
+
+	normalizeVariationImages(res)
+}
+
+func normalizeVariationImages(res Result) {
+	raw, ok := res["variations"]
+	if !ok || raw == nil {
+		return
+	}
+
+	vars, ok := raw.([]any)
+	if !ok {
+		return
+	}
+
+	for i, item := range vars {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		images := collectVariationImages(obj)
+		if len(images) == 0 {
+			continue
+		}
+
+		obj["images"] = images
+		// Keep a legacy single-image field during migration.
+		obj["image"] = images[0]
+		vars[i] = obj
+	}
+
+	res["variations"] = vars
+}
+
+func collectVariationImages(obj map[string]any) []string {
+	out := make([]string, 0, 4)
+	seen := make(map[string]bool, 4)
+
+	add := func(s string) {
+		s = strings.TrimSpace(s)
+		if s == "" || seen[s] {
+			return
+		}
+		seen[s] = true
+		out = append(out, s)
+	}
+
+	if raw, ok := obj["images"]; ok && raw != nil {
+		switch vv := raw.(type) {
+		case []any:
+			for _, it := range vv {
+				if s, ok := it.(string); ok {
+					add(s)
+				}
+			}
+		case []string:
+			for _, s := range vv {
+				add(s)
+			}
+		case string:
+			add(vv)
+		}
+	}
+
+	if v, ok := obj["image"].(string); ok {
+		add(v)
+	}
+
+	return out
 }
 
 func (r *Runner) RunOnce(opts Options) (string, Result, error) {
@@ -203,6 +273,13 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 
 	res, usedFallback, err := parseResult(tr.Name(), raw)
 	if err != nil {
+		if fallbackRes, ferr := loadOrchestratorFinalFallback(opts); ferr == nil {
+			res = fallbackRes
+			usedFallback = true
+			err = nil
+		}
+	}
+	if err != nil {
 		res = errorResult(opts.URL, err)
 		if authErr != nil {
 			res["auth_check_error"] = authErr.Error()
@@ -244,6 +321,32 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	outPath, err := writeResult(opts.OutDir, res)
 	return outPath, res, err
 	// return "", nil, nil
+}
+
+func loadOrchestratorFinalFallback(opts Options) (Result, error) {
+	if opts.PromptMode != promptModeSkill {
+		return nil, fmt.Errorf("orchestrator fallback disabled: prompt mode is not skill")
+	}
+	if strings.TrimSpace(opts.SkillName) != shopeeOrchestratorPipelineSkill {
+		return nil, fmt.Errorf("orchestrator fallback disabled: skill is not %s", shopeeOrchestratorPipelineSkill)
+	}
+	if strings.TrimSpace(opts.RunID) == "" {
+		return nil, fmt.Errorf("orchestrator fallback disabled: empty run id")
+	}
+
+	finalPath := filepath.Join(opts.OutDir, "artifacts", opts.RunID, "final.json")
+	b, err := os.ReadFile(finalPath)
+	if err != nil {
+		return nil, fmt.Errorf("read orchestrator final artifact: %w", err)
+	}
+
+	res, _, err := parseResult("orchestrator-final-artifact", string(b))
+	if err != nil {
+		return nil, fmt.Errorf("parse orchestrator final artifact: %w", err)
+	}
+	res["result_source"] = "artifact_final_fallback"
+	res["artifact_final_path"] = finalPath
+	return res, nil
 }
 
 func nowISO() string {

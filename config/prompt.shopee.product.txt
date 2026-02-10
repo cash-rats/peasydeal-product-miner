@@ -83,7 +83,7 @@ Output contract (JSON ONLY, no markdown):
     {
       "title": "string",
       "position": "int",
-      "image": "string"
+      "images": ["string"] (optional; empty array allowed)
     }
   ]
 }

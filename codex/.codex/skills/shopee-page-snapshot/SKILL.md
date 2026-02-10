@@ -11,7 +11,7 @@ Goal: perform **exactly one** browsing session to capture all state needed for d
 - core signals (title/description/price/currency + wall detection)
 - images (overlay thumbnails, limited)
 - variations (options text, limited)
-- variation -> image mapping for **first 10** options (best-effort; failures skipped)
+- variation -> images mapping for **first 10** options (best-effort; failures skipped)
 
 Important: the final stdout must be **a small JSON object only**. All large data (HTML, JSON-LD, DOM dumps) must be written to files under `out/artifacts/<run_id>/` (repo-relative; works on host and in Docker where `/app/out` maps to `/out`).
 
@@ -148,12 +148,16 @@ Rules:
    - Return up to 20 options in DOM order with 0-based `position`
 16) Write `out/artifacts/<run_id>/s0-variations.json`
 
-### H) Variation -> image mapping (first 10, best-effort)
+### H) Variation -> images mapping (first 10, best-effort)
 17) For the first 10 variation options:
    - Hover (or click) the option (best-effort)
-   - Read the current main image URL (`currentSrc/src/data-src`)
+   - Read current image URL candidates (at minimum main image `currentSrc/src/data-src`; include extra gallery images when available)
    - If an option fails to map, skip it and continue
-18) Write `out/artifacts/<run_id>/s0-variation_image_map.json`
+18) Write `out/artifacts/<run_id>/s0-variation_image_map.json` with entries normalized as:
+   - `title` (string)
+   - `position` (0-based int)
+   - `images` (string array; may be empty)
+   - During migration you may also include legacy `image` as `images[0]`
 
 ### I) Close tab
 19) DevTools `close_page` with `pageIdx` (always).

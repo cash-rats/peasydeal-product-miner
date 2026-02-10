@@ -259,7 +259,7 @@ Convert the TEXT below into EXACTLY ONE valid JSON object matching this contract
     {
       "title": "string",
       "position": "int",
-      "image": "string (optional)"
+      "images": ["string"] (optional; empty array allowed)
     }
   ]
 }
