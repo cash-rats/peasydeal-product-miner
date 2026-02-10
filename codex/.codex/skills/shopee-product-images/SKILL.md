@@ -1,6 +1,6 @@
 ---
 name: shopee-product-images
-description: Parse snapshot artifacts offline and return a short JSON list of product image URLs.
+description: Parse snapshot HTML artifacts offline and return a short JSON list of product image URLs.
 ---
 
 # Shopee Product Images (images_extract)
@@ -12,20 +12,37 @@ This skill is offline-only.
 Runtime prompt must provide either:
 
 - `artifact_dir` (preferred), or
-- explicit path(s) for image-related snapshot files
+- explicit path for image html artifact.
 
 Do not open/navigate browser pages in this skill.
-Do not parse HTML artifacts in this skill.
 
 ## Required behavior
 
-1. Read image artifacts from snapshot stage, preferred order:
-   - `s0-overlay_images.json` (fallback: `overlay_images.json`)
-   - image fields inside `s0-page_state.json` if present
-2. Keep only HTTP/HTTPS URLs.
-3. Deduplicate URLs.
-4. Enforce hard max = 20 images.
-5. If nothing is found, return `status="ok"` with empty list.
+1. Read HTML artifacts from snapshot stage, preferred order:
+   - `s0-overlay.html.gz`
+   - `s0-overlay.html`
+   - fallback: `s0-initial.html.gz`, `s0-initial.html`
+   - backward compatibility fallback: `s0-page.html.gz`, `s0-page.html`
+2. Extract product image URLs from HTML.
+3. Keep only HTTP/HTTPS URLs.
+4. Deduplicate URLs.
+5. Enforce hard max = 20 images.
+6. If nothing is found, return `status="ok"` with empty list.
+7. Write the same output JSON to `images_extract.json` under `artifact_dir` (or explicit `--output` path).
+
+## Required helper usage
+
+Use local helper script in this skill directory:
+
+```bash
+python3 ./scripts/extract_images_from_html.py --artifact-dir out/artifacts/<run_id> --output out/artifacts/<run_id>/images_extract.json
+```
+
+Alternative (explicit file):
+
+```bash
+python3 ./scripts/extract_images_from_html.py --html-path out/artifacts/<run_id>/s0-overlay.html.gz --output out/artifacts/<run_id>/images_extract.json
+```
 
 ## Output (JSON only)
 
