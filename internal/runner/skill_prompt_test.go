@@ -35,14 +35,28 @@ func TestBuildSkillPrompt_Shopee(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildSkillPrompt error: %v", err)
 	}
-	if !strings.Contains(got, shopeeProductCrawlerSkill) {
+	if !strings.Contains(got, shopeeOrchestratorPipelineSkill) {
 		t.Fatalf("expected skill name in prompt: %s", got)
 	}
 	if !strings.Contains(got, "https://shopee.tw/product/1/2") {
 		t.Fatalf("expected URL in prompt: %s", got)
 	}
-	if !strings.Contains(got, "Use the \"shopee-product-crawler\" skill as the primary crawling guide") {
+	if !strings.Contains(got, "Use the \"shopee-orchestrator-pipeline\" skill as the primary crawling guide") {
 		t.Fatalf("expected skill invocation prompt: %s", got)
+	}
+}
+
+func TestBuildSkillPrompt_RejectsUnsupportedShopeeSkill(t *testing.T) {
+	_, err := buildSkillPrompt(
+		source.Shopee,
+		"https://shopee.tw/product/1/2",
+		"shopee-page-snapshot",
+		"gemini",
+		"",
+		"out",
+	)
+	if err == nil {
+		t.Fatalf("expected error")
 	}
 }
 

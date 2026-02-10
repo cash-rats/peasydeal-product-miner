@@ -201,59 +201,6 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 		return outPath, res, err
 	}
 
-	// Snapshot orchestrator: if the selected skill is the snapshot skill, the tool output is a pointer
-	// to artifacts under /out/artifacts/<run_id>. Build the final contract output deterministically from artifacts.
-	if opts.PromptMode == promptModeSkill && strings.TrimSpace(opts.SkillName) == shopeePageSnapshotSkill {
-		ptr, perr := parseSnapshotPointer(raw)
-		if perr != nil {
-			res := errorResult(opts.URL, perr)
-			if authErr != nil {
-				res["auth_check_error"] = authErr.Error()
-			}
-			outPath, werr := writeResult(opts.OutDir, res)
-			if werr != nil {
-				return "", res, werr
-			}
-			return outPath, res, perr
-		}
-
-		res, berr := buildCrawlResultFromSnapshot(ptr, opts.URL)
-		if berr != nil {
-			res = errorResult(opts.URL, berr)
-			if authErr != nil {
-				res["auth_check_error"] = authErr.Error()
-			}
-			outPath, werr := writeResult(opts.OutDir, res)
-			if werr != nil {
-				return "", res, werr
-			}
-			return outPath, res, berr
-		}
-
-		res.setdefault("url", opts.URL)
-		res.setdefault("source", string(src))
-		res.setdefault("captured_at", nowISO())
-		res.ensureImagesArray()
-		normalizeResult(res)
-		if authErr != nil {
-			res["auth_check_error"] = authErr.Error()
-		}
-		if verr := validateContract(res); verr != nil {
-			res = errorResult(opts.URL, verr)
-			if authErr != nil {
-				res["auth_check_error"] = authErr.Error()
-			}
-			outPath, werr := writeResult(opts.OutDir, res)
-			if werr != nil {
-				return "", res, werr
-			}
-			return outPath, res, verr
-		}
-
-		outPath, err := writeResult(opts.OutDir, res)
-		return outPath, res, err
-	}
-
 	res, usedFallback, err := parseResult(tr.Name(), raw)
 	if err != nil {
 		res = errorResult(opts.URL, err)
