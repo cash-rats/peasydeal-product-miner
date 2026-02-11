@@ -210,22 +210,14 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	src, err := source.Detect(opts.URL)
 	if err != nil {
 		res := errorResult(opts.URL, err)
-		outPath, werr := writeResult(opts.OutDir, res)
-		if werr != nil {
-			return "", res, werr
-		}
-		return outPath, res, err
+		return "", res, err
 	}
 
 	if opts.PromptMode == promptModeLegacy && opts.PromptFile == "" {
 		c, err := crawler.ForSource(src)
 		if err != nil {
 			res := errorResult(opts.URL, err)
-			outPath, werr := writeResult(opts.OutDir, res)
-			if werr != nil {
-				return "", res, werr
-			}
-			return outPath, res, err
+			return "", res, err
 		}
 		opts.PromptFile = c.DefaultPromptFile()
 	}
@@ -234,33 +226,27 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	r.logger.Infof("📨 prompt used: %v", prompt)
 	if err != nil {
 		res := errorResult(opts.URL, err)
-		outPath, werr := writeResult(opts.OutDir, res)
-		if werr != nil {
-			return "", res, werr
-		}
-		return outPath, res, err
+		return "", res, err
 	}
 
 	tr, ok := r.runners[opts.Tool]
 	if !ok {
 		err := fmt.Errorf("❌ Unknown tool: %s", opts.Tool)
 		res := errorResult(opts.URL, err)
-		outPath, werr := writeResult(opts.OutDir, res)
-		if werr != nil {
-			return "", res, werr
-		}
-		return outPath, res, err
+		return "", res, err
 	}
 
 	authErr := tr.CheckAuth()
 	raw, runErr := tr.Run(opts.URL, prompt)
 	var res Result
+	outPath := ""
 	if isShopeeOrchestratorSkillMode(opts, src) {
+		outPath = orchestratorFinalPath(opts)
 		r.logger.Infow(
 			"runner_orchestrator_artifact_final_read",
 			"tool", tr.Name(),
 			"url", opts.URL,
-			"path", orchestratorFinalPath(opts),
+			"path", outPath,
 		)
 		res, err = loadOrchestratorFinalResult(opts, src)
 		if err != nil && runErr != nil {
@@ -271,10 +257,6 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 			if authErr != nil {
 				res["auth_check_error"] = authErr.Error()
 			}
-			outPath, werr := writeResult(opts.OutDir, res)
-			if werr != nil {
-				return "", res, werr
-			}
 			return outPath, res, err
 		}
 	} else {
@@ -283,10 +265,6 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 			res := errorResult(opts.URL, err)
 			if authErr != nil {
 				res["auth_check_error"] = authErr.Error()
-			}
-			outPath, werr := writeResult(opts.OutDir, res)
-			if werr != nil {
-				return "", res, werr
 			}
 			return outPath, res, err
 		}
@@ -297,10 +275,6 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 			res = errorResult(opts.URL, err)
 			if authErr != nil {
 				res["auth_check_error"] = authErr.Error()
-			}
-			outPath, werr := writeResult(opts.OutDir, res)
-			if werr != nil {
-				return "", res, werr
 			}
 			return outPath, res, err
 		}
@@ -319,15 +293,10 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 		if authErr != nil {
 			res["auth_check_error"] = authErr.Error()
 		}
-		outPath, werr := writeResult(opts.OutDir, res)
-		if werr != nil {
-			return "", res, werr
-		}
 		return outPath, res, verr
 	}
 
-	outPath, err := writeResult(opts.OutDir, res)
-	return outPath, res, err
+	return outPath, res, nil
 	// return "", nil, nil
 }
 
@@ -475,27 +444,4 @@ func errorResult(url string, err error) Result {
 		"captured_at": nowISO(),
 		"error":       err.Error(),
 	}
-}
-
-func writeResult(outDir string, r Result) (string, error) {
-	ts := time.Now().UTC().Format("20060102T150405Z")
-	outPath := filepath.Join(outDir, ts+"_"+resultSource(r)+".json")
-	b, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	b = append(b, '\n')
-	if err := os.WriteFile(outPath, b, 0o644); err != nil {
-		return "", err
-	}
-	return outPath, nil
-}
-
-func resultSource(r Result) string {
-	rawURL, _ := r["url"].(string)
-
-	if detected, err := source.Detect(rawURL); err == nil && detected != "" {
-		return string(detected)
-	}
-	return "unknown"
 }
