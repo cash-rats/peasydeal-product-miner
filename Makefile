@@ -41,8 +41,8 @@ help:
 		"  make vnc-tunnel                Open SSH tunnel for VNC (localhost:5901 -> remote:5901)" \
 		"  make ghcr-login               Login to GHCR using GHCR_USER and GHCR_TOKEN from .env" \
 		"  make deploy env=<name> build=1        Deploy to remote server via scripts/deploy.sh" \
-		"  make deploy-justin-static-home-4       Build+push and deploy to justin-static-home-4" \
-	"  make deploy-justin-static-home-4-pull  Pull-only deploy to justin-static-home-4" \
+		"  make deploy-pd-crawler-1       Build+push and deploy to pd-crawler-1" \
+	"  make deploy-pd-crawler-1-pull  Pull-only deploy to pd-crawler-1" \
 	"  make deploy-devtool-justin-static-home-4  Build+upload devtool to justin-static-home-4" \
 	"  make goose-create name=<migration_name>  Create a goose SQL migration in db/migrations"
 
@@ -178,13 +178,13 @@ deploy:
 		./scripts/deploy.sh "$(env)"; \
 	fi
 
-.PHONY: deploy-justin-static-home-4
-deploy-justin-static-home-4:
-	@./scripts/deploy.sh justin-static-home-4 --build
+.PHONY: deploy-pd-crawler-1
+deploy-pd-crawler-1:
+	@./scripts/deploy.sh pd-crawler-1 --build
 
-.PHONY: deploy-justin-static-home-4-pull
-deploy-justin-static-home-4-pull:
-	@./scripts/deploy.sh justin-static-home-4
+.PHONY: deploy-pd-crawler-1-pull
+deploy-pd-crawler-1-pull:
+	@./scripts/deploy.sh pd-crawler-1
 
 .PHONY: deploy-devtool-justin-static-home-4
 deploy-devtool-justin-static-home-4: devtool-build
