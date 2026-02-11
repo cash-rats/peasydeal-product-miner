@@ -75,56 +75,11 @@ func (r *CodexRunner) Run(url string, prompt string) (string, error) {
 		return "", err
 	}
 
-	if _, err := extractJSONObjectWithStatus(modelText); err == nil {
-		r.logCodexOutput(url, modelText)
-		return modelText, nil
+	if _, err := extractJSONObjectWithStatus(modelText); err != nil {
+		return "", fmt.Errorf("codex returned non-JSON output: %w", err)
 	}
-
-	if _, err := extractFirstJSONObject(modelText); err == nil {
-		r.logger.Infow(
-			"runner_codex_repair_attempt",
-			"tool", "codex",
-			"url", url,
-			"err", "missing status",
-		)
-	} else {
-		r.logger.Infow(
-			"runner_codex_repair_attempt",
-			"tool", "codex",
-			"url", url,
-			"err", err.Error(),
-		)
-	}
-	repairPrompt := buildCodexRepairPrompt(url, modelText)
-
-	repairedText, rerr := r.runModelText(url, repairPrompt)
-	if rerr != nil {
-		r.logger.Infow(
-			"runner_codex_repair_failed",
-			"tool", "codex",
-			"url", url,
-			"err", rerr.Error(),
-		)
-		return "", fmt.Errorf("codex returned non-JSON output: %w", rerr)
-	}
-
-	if _, perr := extractJSONObjectWithStatus(repairedText); perr != nil {
-		r.logger.Infow(
-			"runner_codex_repair_failed",
-			"tool", "codex",
-			"url", url,
-			"err", perr.Error(),
-		)
-		return "", fmt.Errorf("codex returned non-JSON output: %w", perr)
-	}
-
-	r.logger.Infow(
-		"runner_codex_repair_succeeded",
-		"tool", "codex",
-		"url", url,
-	)
-	r.logCodexOutput(url, repairedText)
-	return repairedText, nil
+	r.logCodexOutput(url, modelText)
+	return modelText, nil
 }
 
 func (r *CodexRunner) runModelText(url string, prompt string) (string, error) {
@@ -233,49 +188,6 @@ func (r *CodexRunner) logCodexOutput(url string, out string) {
 	}
 
 	r.logger.Debugw("llm_output", "tool", "codex", "url", url, "truncated", truncated, "output", out)
-}
-
-func buildCodexRepairPrompt(url, previousOutput string) string {
-	if previousOutput == "" {
-		previousOutput = "<empty>"
-	}
-
-	return fmt.Sprintf(`
-You returned invalid JSON or did not follow the output contract.
-
-Convert the TEXT below into EXACTLY ONE valid JSON object matching this contract:
-{
-  "url": "string",
-  "status": "ok | needs_manual | error",
-  "captured_at": "ISO-8601 UTC timestamp",
-  "notes": "string (required when status=needs_manual)",
-  "error": "string (required when status=error)",
-  "title": "string",
-  "description": "string",
-  "currency": "string (e.g. TWD)",
-  "price": "number or numeric string",
-  "images": ["string"] (optional; empty array allowed),
-  "variations": [
-    {
-      "title": "string",
-      "position": "int",
-      "images": ["string"] (optional; empty array allowed)
-    }
-  ]
-}
-
-Rules:
-- Output JSON ONLY. No markdown fences. No extra text.
-- Do not call any tools.
-- url must be %q.
-- If required fields are missing, set status="error" and explain in error.
-- If the text indicates a login/verification/CAPTCHA wall, set status="needs_manual" and explain in notes.
-
-TEXT:
-<<<
-%s
->>>
-`, url, previousOutput)
 }
 
 var _ ToolRunner = (*CodexRunner)(nil)

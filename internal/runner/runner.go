@@ -253,44 +253,57 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	}
 
 	authErr := tr.CheckAuth()
-	raw, err := tr.Run(opts.URL, prompt)
-	if err != nil {
-		res := errorResult(opts.URL, err)
-		if authErr != nil {
-			res["auth_check_error"] = authErr.Error()
-		}
-		outPath, werr := writeResult(opts.OutDir, res)
-		if werr != nil {
-			return "", res, werr
-		}
-		return outPath, res, err
-	}
-
-	res, usedFallback, err := parseResult(tr.Name(), raw)
-	if err != nil {
-		if fallbackRes, ferr := loadOrchestratorFinalFallback(opts); ferr == nil {
-			res = fallbackRes
-			usedFallback = true
-			err = nil
-		}
-	}
-	if err != nil {
-		res = errorResult(opts.URL, err)
-		if authErr != nil {
-			res["auth_check_error"] = authErr.Error()
-		}
-		outPath, werr := writeResult(opts.OutDir, res)
-		if werr != nil {
-			return "", res, werr
-		}
-		return outPath, res, err
-	}
-	if usedFallback {
-		r.logger.Debugw(
-			"runner_parse_result_fallback",
+	raw, runErr := tr.Run(opts.URL, prompt)
+	var res Result
+	if isShopeeOrchestratorSkillMode(opts, src) {
+		r.logger.Infow(
+			"runner_orchestrator_artifact_final_read",
 			"tool", tr.Name(),
 			"url", opts.URL,
+			"path", orchestratorFinalPath(opts),
 		)
+		res, err = loadOrchestratorFinalResult(opts, src)
+		if err != nil && runErr != nil {
+			err = fmt.Errorf("%w (tool error: %v)", err, runErr)
+		}
+		if err != nil {
+			res = errorResult(opts.URL, err)
+			if authErr != nil {
+				res["auth_check_error"] = authErr.Error()
+			}
+			outPath, werr := writeResult(opts.OutDir, res)
+			if werr != nil {
+				return "", res, werr
+			}
+			return outPath, res, err
+		}
+	} else {
+		if runErr != nil {
+			err := runErr
+			res := errorResult(opts.URL, err)
+			if authErr != nil {
+				res["auth_check_error"] = authErr.Error()
+			}
+			outPath, werr := writeResult(opts.OutDir, res)
+			if werr != nil {
+				return "", res, werr
+			}
+			return outPath, res, err
+		}
+
+		var err error
+		res, _, err = parseResult(tr.Name(), raw)
+		if err != nil {
+			res = errorResult(opts.URL, err)
+			if authErr != nil {
+				res["auth_check_error"] = authErr.Error()
+			}
+			outPath, werr := writeResult(opts.OutDir, res)
+			if werr != nil {
+				return "", res, werr
+			}
+			return outPath, res, err
+		}
 	}
 
 	res.setdefault("url", opts.URL)
@@ -318,30 +331,58 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	// return "", nil, nil
 }
 
-func loadOrchestratorFinalFallback(opts Options) (Result, error) {
+func loadOrchestratorFinalResult(opts Options, src source.Source) (Result, error) {
 	if opts.PromptMode != promptModeSkill {
 		return nil, fmt.Errorf("orchestrator fallback disabled: prompt mode is not skill")
 	}
-	if strings.TrimSpace(opts.SkillName) != shopeeOrchestratorPipelineSkill {
+
+	skillName := strings.TrimSpace(opts.SkillName)
+	if skillName == "" {
+		skillName = defaultSkillName(src)
+	}
+	if skillName != shopeeOrchestratorPipelineSkill {
 		return nil, fmt.Errorf("orchestrator fallback disabled: skill is not %s", shopeeOrchestratorPipelineSkill)
 	}
 	if strings.TrimSpace(opts.RunID) == "" {
-		return nil, fmt.Errorf("orchestrator fallback disabled: empty run id")
+		return nil, fmt.Errorf("orchestrator final artifact requires non-empty run id")
 	}
 
-	finalPath := filepath.Join(opts.OutDir, "artifacts", opts.RunID, "final.json")
+	finalPath := orchestratorFinalPath(opts)
 	b, err := os.ReadFile(finalPath)
 	if err != nil {
-		return nil, fmt.Errorf("read orchestrator final artifact: %w", err)
+		return nil, fmt.Errorf("read orchestrator final artifact: %w (path=%s)", err, finalPath)
 	}
 
 	res, _, err := parseResult("orchestrator-final-artifact", string(b))
 	if err != nil {
 		return nil, fmt.Errorf("parse orchestrator final artifact: %w", err)
 	}
-	res["result_source"] = "artifact_final_fallback"
+	if status, _ := res["status"].(string); strings.TrimSpace(status) == "error" {
+		msg, _ := res["error"].(string)
+		msg = strings.TrimSpace(msg)
+		if msg == "" {
+			msg = "final artifact status is error"
+		}
+		return nil, fmt.Errorf("orchestrator final artifact status error: %s", msg)
+	}
+	res["result_source"] = "artifact_final"
 	res["artifact_final_path"] = finalPath
 	return res, nil
+}
+
+func orchestratorFinalPath(opts Options) string {
+	return filepath.Join(opts.OutDir, "artifacts", opts.RunID, "final.json")
+}
+
+func isShopeeOrchestratorSkillMode(opts Options, src source.Source) bool {
+	if opts.PromptMode != promptModeSkill {
+		return false
+	}
+	skillName := strings.TrimSpace(opts.SkillName)
+	if skillName == "" {
+		skillName = defaultSkillName(src)
+	}
+	return skillName == shopeeOrchestratorPipelineSkill
 }
 
 func nowISO() string {

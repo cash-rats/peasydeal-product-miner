@@ -82,51 +82,10 @@ func (r *GeminiRunner) Run(url string, prompt string) (string, error) {
 		return "", err
 	}
 
-	if _, err := extractJSONObjectWithStatus(modelText); err == nil {
-		return modelText, nil
+	if _, err := extractJSONObjectWithStatus(modelText); err != nil {
+		return "", fmt.Errorf("gemini returned non-JSON output: %w", err)
 	}
-
-	// If Gemini cut off the JSON mid-output (common when output is too long or the model hits limits),
-	// a "repair" prompt can't recover missing fields. First try re-running the original crawl prompt,
-	// but with explicit output size limits to avoid truncation.
-	if diagnoseContractIssue(modelText) == "invalid or truncated JSON" {
-		r.logger.Infow(
-			"runner_gemini_retry_truncation",
-			"tool", "gemini",
-			"url", url,
-		)
-
-		retryPrompt := buildGeminiTruncationRetryPrompt(prompt)
-		retriedText, rerr := r.runModelText(url, retryPrompt)
-		if rerr == nil {
-			if _, perr := extractJSONObjectWithStatus(retriedText); perr == nil {
-				r.logger.Infow("runner_gemini_retry_truncation_succeeded", "tool", "gemini", "url", url)
-				return retriedText, nil
-			}
-		}
-	}
-
-	r.logger.Infow(
-		"runner_gemini_repair_attempt",
-		"tool", "gemini",
-		"url", url,
-		"err", diagnoseContractIssue(modelText),
-	)
-	repairPrompt := buildGeminiRepairPrompt(url, modelText)
-
-	repairedText, rerr := r.runModelText(url, repairPrompt)
-	if rerr != nil {
-		r.logger.Infow("runner_gemini_repair_failed", "tool", "gemini", "url", url, "err", rerr.Error())
-		return "", fmt.Errorf("gemini returned non-JSON output: %w", rerr)
-	}
-
-	if _, perr := extractJSONObjectWithStatus(repairedText); perr != nil {
-		r.logger.Infow("runner_gemini_repair_failed", "tool", "gemini", "url", url, "err", perr.Error())
-		return "", fmt.Errorf("gemini returned non-JSON output: %w", perr)
-	}
-
-	r.logger.Infow("runner_gemini_repair_succeeded", "tool", "gemini", "url", url)
-	return repairedText, nil
+	return modelText, nil
 }
 
 func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
@@ -256,66 +215,6 @@ func unwrapGeminiJSON(raw string) (string, bool) {
 	default:
 		return "", false
 	}
-}
-
-func buildGeminiRepairPrompt(url, previousOutput string) string {
-	if previousOutput == "" {
-		previousOutput = "<empty>"
-	}
-
-	return fmt.Sprintf(`
-You returned invalid JSON or did not follow the output contract.
-
-Convert the TEXT below into EXACTLY ONE valid JSON object matching this contract:
-{
-  "url": "string",
-  "status": "ok | needs_manual | error",
-  "captured_at": "ISO-8601 UTC timestamp",
-  "notes": "string (required when status=needs_manual)",
-  "error": "string (required when status=error)",
-  "title": "string",
-  "description": "string",
-  "currency": "string (e.g. TWD)",
-  "price": "number or numeric string",
-  "images": ["string"] (optional; empty array allowed),
-  "variations": [
-    {
-      "title": "string",
-      "position": "int",
-      "images": ["string"] (optional; empty array allowed)
-    }
-  ]
-}
-
-Rules:
-- Output JSON ONLY. No markdown fences. No extra text.
-- Do not call any tools.
-- url must be %q.
-- If required fields are missing, set status="error" and explain in error.
-- If the text indicates a login/verification/CAPTCHA wall, set status="needs_manual" and explain in notes.
-- Always include "variations": [] if you can't infer variations.
-- If images are too many, include only the first 20.
-- If description is too long, truncate it to 1500 characters.
-
-TEXT:
-<<<
-%s
->>>
-`, url, previousOutput)
-}
-
-func buildGeminiTruncationRetryPrompt(originalPrompt string) string {
-	// IMPORTANT: This string is appended to the crawl prompt that DOES use tools.
-	// Keep it short so it doesn't bloat the tool-augmented context.
-	return originalPrompt + `
-
-Output limits (mandatory):
-- Output MUST be exactly ONE JSON object and NOTHING ELSE.
-- Always include "variations": [] when no variations found.
-- If there are many images/variations, include only the first 20 of each.
-- Truncate "description" to at most 1500 characters.
-- Keep the whole JSON under ~6000 characters; if needed, drop optional fields (images/variations) first.
-`
 }
 
 func (r *GeminiRunner) logGeminiOutput(url string, out string) {

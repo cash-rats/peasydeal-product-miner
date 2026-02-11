@@ -57,15 +57,12 @@ func TestCodexRunner_Run_ReturnsExtractedJSON_NoRepair(t *testing.T) {
 	}
 }
 
-func TestCodexRunner_Run_RepairsOnce(t *testing.T) {
+func TestCodexRunner_Run_NoRetryWhenInvalidJSON(t *testing.T) {
 	t.Parallel()
 
 	var calls [][]string
-	outputs := []string{"not json", `{"status":"ok","url":"https://example.com/p/1","captured_at":"2026-01-01T00:00:00Z","title":"t","description":"d","currency":"TWD","price":"1"}`}
-	exits := []int{0, 0}
-
-	url := "https://example.com/p/1"
-	prompt := "original prompt"
+	outputs := []string{"not json"}
+	exits := []int{0}
 
 	r := NewCodexRunner(CodexRunnerConfig{
 		Cmd:              "codex",
@@ -89,32 +86,23 @@ func TestCodexRunner_Run_RepairsOnce(t *testing.T) {
 		return cmd
 	}
 
-	got, err := r.Run(url, prompt)
-	if err != nil {
-		t.Fatalf("Run error: %v", err)
+	_, err := r.Run("https://example.com/p/1", "original prompt")
+	if err == nil {
+		t.Fatalf("expected error")
 	}
-	if got != `{"status":"ok","url":"https://example.com/p/1","captured_at":"2026-01-01T00:00:00Z","title":"t","description":"d","currency":"TWD","price":"1"}` {
-		t.Fatalf("unexpected output: %s", got)
+	if !strings.Contains(err.Error(), "codex returned non-JSON output") {
+		t.Fatalf("unexpected error: %v", err)
 	}
-
-	if len(calls) != 2 {
-		t.Fatalf("expected 2 calls, got %d", len(calls))
-	}
-	if calls[0][len(calls[0])-1] != prompt {
-		t.Fatalf("unexpected first prompt: %q", calls[0][len(calls[0])-1])
-	}
-
-	repairPrompt := calls[1][len(calls[1])-1]
-	if !strings.Contains(repairPrompt, url) || !strings.Contains(repairPrompt, "not json") {
-		t.Fatalf("unexpected repair prompt: %q", repairPrompt)
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(calls))
 	}
 }
 
-func TestCodexRunner_Run_RepairFails(t *testing.T) {
+func TestCodexRunner_Run_RunModelError(t *testing.T) {
 	t.Parallel()
 
-	outputs := []string{"not json", "still not json"}
-	exits := []int{0, 0}
+	outputs := []string{""}
+	exits := []int{1}
 
 	r := NewCodexRunner(CodexRunnerConfig{
 		Cmd:              "codex",
@@ -140,11 +128,11 @@ func TestCodexRunner_Run_RepairFails(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-	if !strings.Contains(err.Error(), "codex returned non-JSON output") {
+	if !strings.Contains(err.Error(), "codex exec failed") {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if callIdx != 2 {
-		t.Fatalf("expected 2 calls, got %d", callIdx)
+	if callIdx != 1 {
+		t.Fatalf("expected 1 call, got %d", callIdx)
 	}
 }
 
