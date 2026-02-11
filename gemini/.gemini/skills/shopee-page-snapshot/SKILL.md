@@ -26,6 +26,9 @@ Rules:
 - Do not print raw HTML in stdout.
 - If one snapshot fails, continue best-effort and record notes.
 - `run_id` and `artifact_dir` must be non-empty.
+- Must record tab lifecycle in artifacts:
+  - the created crawl tab identity right after `new_page`
+  - whether close was attempted and whether it succeeded
 
 ## Required Python helper usage
 
@@ -62,6 +65,16 @@ Return exactly one JSON object:
     "overlay_html": "string",
     "variation_html_dir": "string"
   },
+  "tab_tracking": {
+    "created_tab": {
+      "page_idx": 0,
+      "target_id": "string",
+      "url": "string"
+    },
+    "close_attempted": true,
+    "close_succeeded": true,
+    "close_error": "string"
+  },
   "notes": "string",
   "error": "string"
 }
@@ -71,6 +84,9 @@ Rules:
 
 - JSON only. No markdown fences.
 - Always include all `snapshot_files` keys. Missing file => `""` and explain in `notes`.
+- Always include `tab_tracking` with real values (no placeholders).
+- `tab_tracking.created_tab.target_id` is required when a tab was created.
+- If close fails, set `close_succeeded=false` and put reason in `close_error`.
 - If blocked by login/verification/CAPTCHA and core product content is not visible: `status="needs_manual"`.
 
 ## Steps (single session)
@@ -83,7 +99,11 @@ Rules:
 6. Capture initial HTML with Python helper to `s0-initial.html.gz`.
 7. Best-effort open image overlay; capture `s0-overlay.html.gz`.
 8. Find variation options (up to 10). For each option, interact then capture `s0-variation-<position>.html.gz`.
-9. Write `s0-manifest.json` with file metadata from Python helper outputs.
+9. Write `s0-manifest.json` with file metadata from Python helper outputs plus:
+   - `tab_tracking.created_tab`
+   - `tab_tracking.close_attempted`
+   - `tab_tracking.close_succeeded`
+   - `tab_tracking.close_error`
 10. Write `s0-snapshot-pointer.json` using the exact final stdout JSON object.
 11. Close the created tab.
 

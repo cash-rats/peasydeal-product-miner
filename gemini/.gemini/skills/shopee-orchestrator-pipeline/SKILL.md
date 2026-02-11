@@ -20,6 +20,7 @@ Run this exact sequence:
 5. Always write valid JSON objects. Never use placeholder JSON.
 6. Ensure crawl tab cleanup before pipeline exit.
 7. A/B/C/D must parse HTML-based artifacts from S0 (not legacy `s0-page_state.json`).
+8. Tab cleanup verification is artifact-only in this version (no CDP re-check).
 
 ## Required Artifact Directory
 
@@ -166,6 +167,7 @@ Build final output from `core_extract.json` as base:
 3. Merge `variations_extract.json.variations` into `variations` (cap `variations_max`).
 4. Merge `variation_image_map_extract.json.variations` by (`title`,`position`) and attach `images` per variation.
 5. If B/C/D fail but A is `ok`, keep final `status="ok"` with degraded arrays.
+6. Read `tab_tracking` from `s0-snapshot-pointer.json` (or `s0-manifest.json` fallback) and write verification result into `meta.json`.
 
 ## Final Output Contract
 
@@ -220,14 +222,30 @@ Write diagnostics:
     "variations_max": 20,
     "variation_image_map_max": 10
   },
-  "fallbacks": []
+  "fallbacks": [],
+  "tab_cleanup": {
+    "mode": "artifact_only",
+    "created_target_id": "string",
+    "close_attempted": true,
+    "close_succeeded": true,
+    "close_error": "string",
+    "verification_status": "ok|failed|unknown",
+    "verification_note": "string"
+  }
 }
 ```
+
+Tab cleanup verification rules (artifact-only):
+
+- Prefer `s0-snapshot-pointer.json.tab_tracking`; fallback to `s0-manifest.json.tab_tracking`.
+- If `created_tab.target_id` missing => `verification_status="unknown"` with note.
+- If `close_attempted=true` and `close_succeeded=true` => `verification_status="ok"`.
+- Otherwise => `verification_status="failed"` and include reason in note.
 
 ## Recovery Rules
 
 - If JSON decode fails, record stage error in `_pipeline-state.json` + `meta.json`, then continue only when degradation policy allows.
 - Missing stage skill file is fatal (`status=error`).
 - Never skip writing state/artifact files after partial failures.
-- Before returning final JSON, perform final crawl-tab cleanup.
+- Before returning final JSON, ensure final artifacts include tab cleanup verification from S0 artifacts.
 - Do not print any extra text beyond final JSON.
