@@ -102,6 +102,13 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 	// we must auto-approve tool actions. Allow overriding via env for safer deployments.
 	args = append(args, "--approval-mode", "yolo")
 
+	// Allow writing artifacts under mounted workspace paths in Docker/headless runs.
+	args = append(args,
+		"--include-directories", "/out",
+		"--include-directories", "/app",
+		"--include-directories", "/gemini",
+	)
+
 	// Allow the MCP server used by our DevTools-based prompts. Without this, Gemini CLI may deny
 	// MCP tool calls in non-interactive mode due to policy.
 	args = append(args, "--allowed-mcp-server-names", "chrome-devtools")
@@ -156,6 +163,11 @@ func (r *GeminiRunner) runAuthProbe() (bool, string) {
 	if r.model != "" {
 		args = append(args, "--model", r.model)
 	}
+	args = append(args,
+		"--include-directories", "/out",
+		"--include-directories", "/app",
+		"--include-directories", "/gemini",
+	)
 
 	cmd := r.execCommandContext(ctx, r.cmd, args...)
 	if r.workDir != "" {
