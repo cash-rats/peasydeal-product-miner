@@ -297,7 +297,6 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	}
 
 	return outPath, res, nil
-	// return "", nil, nil
 }
 
 func loadOrchestratorFinalResult(opts Options, src source.Source) (Result, error) {
