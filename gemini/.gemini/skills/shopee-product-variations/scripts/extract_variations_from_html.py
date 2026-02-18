@@ -99,19 +99,24 @@ def extract_primary_titles(src: str) -> List[str]:
 
 
 def parse_variation_price(src: str) -> str:
+    def normalize_price(raw: str) -> str:
+        t = clean(raw).replace(',', '')
+        m = re.search(r'(\d+(?:\.\d{1,2})?)', t)
+        if not m:
+            return ''
+        return m.group(1)
+
     patterns = [
         r'<div[^>]*class="[^"]*IZPeQz[^"]*B67UQ0[^"]*"[^>]*>\s*([^<]+)\s*</div>',
         r'aria-live="polite".{0,1200}?\$([0-9][0-9,]*)',
     ]
-    for idx, pat in enumerate(patterns):
+    for pat in patterns:
         m = re.search(pat, src, flags=re.I | re.S)
         if not m:
             continue
-        raw = clean(m.group(1))
-        if idx == 1 and raw and not raw.startswith('$'):
-            raw = '$' + raw
-        if re.search(r'\$?\d', raw):
-            return raw
+        price = normalize_price(m.group(1))
+        if price:
+            return price
     return ''
 
 

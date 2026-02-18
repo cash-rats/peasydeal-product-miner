@@ -27,7 +27,7 @@ Do not open/navigate browser pages in this skill.
 3. Normalize each option to:
    - `title` (non-empty string)
    - `position` (0-based integer)
-   - `price` (string like `$782` or numeric-like string; empty string when unavailable)
+   - `price` (numeric-like string without currency symbol, e.g. `782`; empty string when unavailable)
 4. Extract per-variation price from snapshot HTML:
    - preferred: matching `s0-variation-<position>.html.gz` / `.html`
    - fallback: selected variation price in `s0-initial.html.gz` / `.html`

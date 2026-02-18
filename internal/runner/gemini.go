@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -103,11 +105,10 @@ func (r *GeminiRunner) runModelText(url string, prompt string) (string, error) {
 	args = append(args, "--approval-mode", "yolo")
 
 	// Allow writing artifacts under mounted workspace paths in Docker/headless runs.
-	args = append(args,
-		"--include-directories", "/out",
-		"--include-directories", "/app",
-		"--include-directories", "/gemini",
-	)
+	// Gemini CLI errors when a listed directory does not exist, so only include existing dirs.
+	for _, dir := range geminiIncludeDirectories(r.workDir) {
+		args = append(args, "--include-directories", dir)
+	}
 
 	// Allow the MCP server used by our DevTools-based prompts. Without this, Gemini CLI may deny
 	// MCP tool calls in non-interactive mode due to policy.
@@ -163,11 +164,9 @@ func (r *GeminiRunner) runAuthProbe() (bool, string) {
 	if r.model != "" {
 		args = append(args, "--model", r.model)
 	}
-	args = append(args,
-		"--include-directories", "/out",
-		"--include-directories", "/app",
-		"--include-directories", "/gemini",
-	)
+	for _, dir := range geminiIncludeDirectories(r.workDir) {
+		args = append(args, "--include-directories", dir)
+	}
 
 	cmd := r.execCommandContext(ctx, r.cmd, args...)
 	if r.workDir != "" {
@@ -257,6 +256,50 @@ func previewText(s string, max int) string {
 		return s
 	}
 	return s[:max] + "...(truncated)"
+}
+
+func geminiIncludeDirectories(workDir string) []string {
+	candidates := []string{
+		"/out",
+		"/app",
+		"/gemini",
+		"/codex",
+	}
+	if strings.TrimSpace(workDir) != "" {
+		candidates = append(candidates,
+			workDir,
+			filepath.Join(workDir, "out"),
+			filepath.Join(workDir, "gemini"),
+			filepath.Join(workDir, "codex"),
+		)
+	}
+
+	seen := make(map[string]bool, len(candidates))
+	out := make([]string, 0, len(candidates))
+	for _, p := range candidates {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		abs := p
+		if !filepath.IsAbs(abs) {
+			base := workDir
+			if strings.TrimSpace(base) == "" {
+				base, _ = os.Getwd()
+			}
+			abs = filepath.Join(base, p)
+		}
+		info, err := os.Stat(abs)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		if seen[abs] {
+			continue
+		}
+		seen[abs] = true
+		out = append(out, abs)
+	}
+	return out
 }
 
 var _ ToolRunner = (*GeminiRunner)(nil)

@@ -166,8 +166,9 @@ Build final output from `core_extract.json` as base:
 2. Merge `images_extract.json.images` into `images` (dedupe, cap `images_max`).
 3. Merge `variations_extract.json.variations` into `variations` (cap `variations_max`).
 4. Merge `variation_image_map_extract.json.variations` by (`title`,`position`) and attach `images` per variation.
-5. If B/C/D fail but A is `ok`, keep final `status="ok"` with degraded arrays.
-6. Read `tab_tracking` from `s0-snapshot-pointer.json` (or `s0-manifest.json` fallback) and write verification result into `meta.json`.
+5. Preserve variation `price` from `variations_extract.json.variations` into final `variations` items.
+6. If B/C/D fail but A is `ok`, keep final `status="ok"` with degraded arrays.
+7. Read `tab_tracking` from `s0-snapshot-pointer.json` (or `s0-manifest.json` fallback) and write verification result into `meta.json`.
 
 ## Final Output Contract
 
@@ -185,7 +186,7 @@ Return exactly one JSON object:
   "currency": "string",
   "price": "number|string",
   "images": ["string"],
-  "variations": [{"title":"string","position":0,"images":["string"]}],
+  "variations": [{"title":"string","position":0,"price":"number|string","images":["string"]}],
   "artifact_dir": "out/artifacts/<run_id>",
   "run_id": "string"
 }
@@ -195,6 +196,7 @@ Rules:
 
 - Always include `images` and `variations`.
 - Every variation item must include `images` (use `[]` when empty).
+- Every variation item should preserve `price` from variations extraction (use `""` when unavailable).
 - `status=ok` requires core fields.
 - `status=needs_manual` requires non-empty `notes`.
 - `status=error` requires non-empty `error`.
