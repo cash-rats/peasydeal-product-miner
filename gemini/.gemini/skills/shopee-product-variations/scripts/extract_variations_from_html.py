@@ -7,9 +7,18 @@ import html
 import json
 import os
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 MAX_VARIATIONS = 20
+MAX_VARIATION_SNAPSHOTS = 20
+BLOCKED_LABELS = {
+    '跳到主要內容',
+    '加入購物車',
+    '直接購買',
+    '購物車',
+    '登入',
+    '註冊',
+}
 
 
 def read_text(path: str) -> str:
@@ -43,15 +52,18 @@ def clean(s: str) -> str:
 
 
 def is_option_like(s: str) -> bool:
-    if not s:
+    if not s or s in BLOCKED_LABELS:
         return False
-    if len(s) > 50:
+    if len(s) > 80:
         return False
-    # Common shoee variation-like patterns.
-    if re.search(r'(US\s*\d|EU\s*\d|\d+(?:\.\d+)?\s*cm|\d{2,3}號|尺寸|規格|款式|顏色|color|size)', s, re.I):
+    # Avoid obvious navigation/meta labels.
+    if re.search(r'(主要內容|賣家中心|通知|追蹤我們|蝦皮購物)', s, re.I):
+        return False
+    # Common variation-like patterns.
+    if re.search(r'(\d|\*|x|cm|mm|kg|ml|絲|號|入|組|包|款|色|\(|\)|-|/|尺寸|規格|款式|顏色|color|size)', s, re.I):
         return True
-    # Generic short label fallback.
-    return len(s) <= 30
+    # Also allow concise plain labels (e.g. 黑/白/S/M/L) when not blocked.
+    return 1 <= len(s) <= 24
 
 
 def dedupe_keep_order(items: List[str]) -> List[str]:
@@ -69,34 +81,59 @@ def dedupe_keep_order(items: List[str]) -> List[str]:
     return out
 
 
-def extract_from_variation_section(src: str) -> List[str]:
-    section = ''
-    m = re.search(r'<h2[^>]*>\s*Variation\s*</h2>(.*?)</section>', src, flags=re.I | re.S)
-    if m:
-        section = m.group(1)
-    else:
-        m2 = re.search(r'(規格|款式|顏色|樣式)(.*?)(</section>|</div></div></section>)', src, flags=re.I | re.S)
-        if m2:
-            section = m2.group(0)
-
-    if not section:
-        return []
-
+def extract_primary_titles(src: str) -> List[str]:
+    # Strictly read option buttons used by Shopee variation picker.
+    patterns = [
+        r'<button[^>]*class="[^"]*selection-box[^"]*"[^>]*aria-label="([^"]+)"',
+        r'<button[^>]*aria-label="([^"]+)"[^>]*class="[^"]*selection-box[^"]*"',
+    ]
     out: List[str] = []
-    for m in re.finditer(r'aria-label="([^"]+)"', section, flags=re.I):
-        t = clean(m.group(1))
-        if is_option_like(t):
-            out.append(t)
-    for m in re.finditer(r'<span[^>]*>([^<]+)</span>', section, flags=re.I):
-        t = clean(m.group(1))
-        if is_option_like(t):
-            out.append(t)
+    for pat in patterns:
+        for m in re.finditer(pat, src, flags=re.I):
+            t = clean(m.group(1))
+            if is_option_like(t):
+                out.append(t)
+        if out:
+            break
     return dedupe_keep_order(out)
 
 
-def extract_from_variation_snapshots(artifact_dir: str) -> List[str]:
-    out: List[str] = []
-    for i in range(10):
+def parse_variation_price(src: str) -> str:
+    patterns = [
+        r'<div[^>]*class="[^"]*IZPeQz[^"]*B67UQ0[^"]*"[^>]*>\s*([^<]+)\s*</div>',
+        r'aria-live="polite".{0,1200}?\$([0-9][0-9,]*)',
+    ]
+    for idx, pat in enumerate(patterns):
+        m = re.search(pat, src, flags=re.I | re.S)
+        if not m:
+            continue
+        raw = clean(m.group(1))
+        if idx == 1 and raw and not raw.startswith('$'):
+            raw = '$' + raw
+        if re.search(r'\$?\d', raw):
+            return raw
+    return ''
+
+
+def parse_selected_title_from_snapshot(src: str) -> str:
+    pats = [
+        r'<button[^>]*class="[^"]*selection-box-selected[^"]*"[^>]*aria-label="([^"]+)"',
+        r'<button[^>]*aria-label="([^"]+)"[^>]*class="[^"]*selection-box-selected[^"]*"',
+        r'Product image[^"]*?\s([^\s"<]{1,80})"',
+    ]
+    for pat in pats:
+        m = re.search(pat, src, flags=re.I)
+        if not m:
+            continue
+        t = clean(m.group(1))
+        if is_option_like(t):
+            return t
+    return ''
+
+
+def extract_from_variation_snapshots(artifact_dir: str, primary_titles: List[str]) -> List[Dict[str, int | str]]:
+    out: List[Dict[str, int | str]] = []
+    for i in range(MAX_VARIATION_SNAPSHOTS):
         p_gz = os.path.join(artifact_dir, f's0-variation-{i}.html.gz')
         p_html = os.path.join(artifact_dir, f's0-variation-{i}.html')
         p = p_gz if os.path.exists(p_gz) else p_html if os.path.exists(p_html) else ''
@@ -106,29 +143,43 @@ def extract_from_variation_snapshots(artifact_dir: str) -> List[str]:
             src = read_text(p)
         except Exception:
             continue
-        m = re.search(r'aria-label="([^"]+)"[^>]*aria-disabled="(?:true|false)"', src, flags=re.I)
-        if m:
-            t = clean(m.group(1))
-            if is_option_like(t):
-                out.append(t)
-    return dedupe_keep_order(out)
+        title = parse_selected_title_from_snapshot(src)
+        if not title and i < len(primary_titles):
+            title = primary_titles[i]
+        if not is_option_like(title):
+            continue
+        out.append({
+            'title': title,
+            'position': i,
+            'price': parse_variation_price(src),
+        })
+    return out
 
 
 def build_variations(primary_html: str, artifact_dir: str) -> List[Dict[str, int | str]]:
     src = read_text(primary_html)
-    titles = extract_from_variation_section(src)
-    if not titles:
-        # Global fallback on button aria-labels.
-        all_labels = [clean(x) for x in re.findall(r'<button[^>]+aria-label="([^"]+)"', src, flags=re.I)]
-        titles = [t for t in dedupe_keep_order(all_labels) if is_option_like(t)]
+    titles = extract_primary_titles(src)
+    snap_rows = extract_from_variation_snapshots(artifact_dir, titles)
 
-    # Merge with snapshot-derived titles when available.
-    snap_titles = extract_from_variation_snapshots(artifact_dir)
-    merged = dedupe_keep_order(titles + snap_titles)[:MAX_VARIATIONS]
+    price_by_title: Dict[str, str] = {}
+    price_by_pos: Dict[int, str] = {}
+    for row in snap_rows:
+        t = str(row.get('title', ''))
+        p = str(row.get('price', ''))
+        pos = int(row.get('position', 0))
+        if t and p and t not in price_by_title:
+            price_by_title[t] = p
+        if p and pos not in price_by_pos:
+            price_by_pos[pos] = p
+
+    if not titles:
+        titles = [str(r.get('title', '')) for r in snap_rows if is_option_like(str(r.get('title', '')))]
+        titles = dedupe_keep_order(titles)
 
     variations: List[Dict[str, int | str]] = []
-    for i, title in enumerate(merged):
-        variations.append({'title': title, 'position': i})
+    for i, title in enumerate(titles[:MAX_VARIATIONS]):
+        price = price_by_title.get(title, price_by_pos.get(i, ''))
+        variations.append({'title': title, 'position': i, 'price': price})
     return variations
 
 

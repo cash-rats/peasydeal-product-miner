@@ -17,7 +17,7 @@ Write files under `out/artifacts/<run_id>/`:
 
 - `s0-initial.html.gz`
 - `s0-overlay.html.gz` (best-effort)
-- `s0-variation-<position>.html.gz` for first 10 options (best-effort)
+- `s0-variation-<position>.html.gz` for first 20 options (best-effort)
 - `s0-manifest.json` (small metadata JSON)
 - `s0-snapshot-pointer.json` (same JSON object printed to stdout)
 
@@ -98,7 +98,7 @@ Rules:
 5. Generate `run_id`, ensure `artifact_dir` exists.
 6. Capture initial HTML with Python helper to `s0-initial.html.gz`.
 7. Best-effort open image overlay; capture `s0-overlay.html.gz`.
-8. Find variation options (up to 10). For each option, interact then capture `s0-variation-<position>.html.gz`.
+8. Find variation options (up to 20). For each option, interact then capture `s0-variation-<position>.html.gz`.
 9. Write `s0-manifest.json` with file metadata from Python helper outputs plus:
    - `tab_tracking.created_tab`
    - `tab_tracking.close_attempted`

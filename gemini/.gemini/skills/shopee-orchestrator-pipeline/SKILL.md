@@ -35,7 +35,7 @@ Required files:
 - `s0-manifest.json`
 - `s0-initial.html.gz`
 - `s0-overlay.html.gz` (best-effort)
-- `s0-variation-<position>.html.gz` (best-effort, first 10)
+- `s0-variation-<position>.html.gz` (best-effort, first 20)
 - `core_extract.json`
 - `images_extract.json`
 - `variations_extract.json`
@@ -109,7 +109,7 @@ Defaults:
 - `description_max_chars = 1500`
 - `images_max = 20`
 - `variations_max = 20`
-- `variation_image_map_max = 10`
+- `variation_image_map_max = 20`
 - `images_enabled = true`
 - `variations_enabled = true`
 - `variation_image_map_enabled = true`
@@ -220,7 +220,7 @@ Write diagnostics:
     "description_max_chars": 1500,
     "images_max": 20,
     "variations_max": 20,
-    "variation_image_map_max": 10
+    "variation_image_map_max": 20
   },
   "fallbacks": [],
   "tab_cleanup": {

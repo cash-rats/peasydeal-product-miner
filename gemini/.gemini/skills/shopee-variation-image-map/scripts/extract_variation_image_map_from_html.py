@@ -9,7 +9,7 @@ import os
 import re
 from typing import Dict, List
 
-MAX_OPTIONS = 10
+MAX_OPTIONS = 20
 MAX_IMAGES_PER_OPTION = 1
 
 

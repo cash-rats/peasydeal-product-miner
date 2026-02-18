@@ -18,13 +18,13 @@ Do not open/navigate browser pages in this skill.
 ## Required behavior
 
 1. Read mapping sources from snapshot HTML artifacts:
-   - `s0-variation-<position>.html.gz` / `.html` (first 10, best-effort)
+   - `s0-variation-<position>.html.gz` / `.html` (first 20, best-effort)
    - fallback titles from `variations_extract.json` when selected marker is missing
 2. Normalize each item to:
    - `title` (non-empty string)
    - `position` (0-based integer)
    - `images` (array of HTTP/HTTPS URLs)
-3. Enforce hard max = 10 mapped options.
+3. Enforce hard max = 20 mapped options.
 4. Per-item failures must be skipped (best-effort behavior).
 5. If nothing is found, return `status="ok"` with empty list.
 6. Write the same output JSON to `variation_image_map_extract.json` under `artifact_dir` (or explicit `--output` path).
