@@ -216,13 +216,13 @@ Phase-1 scope:
 - [x] 驗收通過（可行性 + 正確性）
 
 ### 12.7 Skill 6: `taobao-orchestrator-pipeline`
-- [ ] `SKILL.md` 初版完成
-- [ ] stage 順序正確執行（S0 -> A -> B -> C -> D -> merge）
-- [ ] 每 stage 都會落地 artifact
-- [ ] `_pipeline-state.json` 具完整狀態流轉
-- [ ] `final.json` 與 stdout JSON 一致
-- [ ] A 成功但 B/C/D 部分失敗時可 degraded `status=ok`
-- [ ] 驗收通過（可行性 + 正確性）
+- [x] `SKILL.md` 初版完成
+- [x] stage 順序正確執行（S0 -> A -> B -> C -> D -> merge）
+- [x] 每 stage 都會落地 artifact
+- [x] `_pipeline-state.json` 具完整狀態流轉
+- [x] `final.json` 與 stdout JSON 一致
+- [x] A 成功但 B/C/D 部分失敗時可 degraded `status=ok`
+- [x] 驗收通過（可行性 + 正確性）
 
 ### 12.8 Cross-Stage Regression
 - [ ] 新增 skill 後，前一個 skill smoke test 仍通過
