@@ -206,14 +206,14 @@ Phase-1 scope:
 - [x] 驗收通過（可行性 + 正確性）
 
 ### 12.6 Skill 5: `taobao-variation-image-map`
-- [ ] `SKILL.md` 初版完成
-- [ ] `extract_variation_image_map_from_html.py` 初版完成
-- [ ] 每筆含 `title/position/images[]`
-- [ ] item-level 失敗可跳過
-- [ ] 全部無結果時回 `status=ok` + `variations=[]`
-- [ ] 致命錯誤才回 `status=error`
-- [ ] 輸出 `variation_image_map_extract.json`
-- [ ] 驗收通過（可行性 + 正確性）
+- [x] `SKILL.md` 初版完成
+- [x] `extract_variation_image_map_from_html.py` 初版完成
+- [x] 每筆含 `title/position/images[]`
+- [x] item-level 失敗可跳過
+- [x] 全部無結果時回 `status=ok` + `variations=[]`
+- [x] 致命錯誤才回 `status=error`
+- [x] 輸出 `variation_image_map_extract.json`
+- [x] 驗收通過（可行性 + 正確性）
 
 ### 12.7 Skill 6: `taobao-orchestrator-pipeline`
 - [ ] `SKILL.md` 初版完成
