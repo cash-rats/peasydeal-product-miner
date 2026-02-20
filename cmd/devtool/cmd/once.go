@@ -101,7 +101,7 @@ func newOnceCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&url, "url", "", "Shopee product URL")
+	cmd.Flags().StringVar(&url, "url", "", "Product URL (Shopee/Taobao/Tmall)")
 	cmd.Flags().StringVar(&promptFile, "prompt-file", "", "Prompt template file path (optional; auto-selected by URL when empty)")
 	cmd.Flags().StringVar(&outDir, "out-dir", "out", "Output directory for result JSON")
 	cmd.Flags().StringVar(&model, "model", "", "Model override for the selected tool (optional; defaults to CODEX_MODEL/GEMINI_MODEL config)")

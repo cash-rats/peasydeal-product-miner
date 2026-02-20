@@ -240,7 +240,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 	raw, runErr := tr.Run(opts.URL, prompt)
 	var res Result
 	outPath := ""
-	if isShopeeOrchestratorSkillMode(opts, src) {
+	if isOrchestratorSkillMode(opts, src) {
 		outPath = orchestratorFinalPath(opts)
 		r.logger.Infow(
 			"runner_orchestrator_artifact_final_read",
@@ -308,8 +308,13 @@ func loadOrchestratorFinalResult(opts Options, src source.Source) (Result, error
 	if skillName == "" {
 		skillName = defaultSkillName(src)
 	}
-	if skillName != shopeeOrchestratorPipelineSkill {
-		return nil, fmt.Errorf("orchestrator fallback disabled: skill is not %s", shopeeOrchestratorPipelineSkill)
+	if !isSupportedOrchestratorSkill(skillName) {
+		return nil, fmt.Errorf(
+			"orchestrator fallback disabled: unsupported skill %q (allowed: %s, %s)",
+			skillName,
+			shopeeOrchestratorPipelineSkill,
+			taobaoOrchestratorPipelineSkill,
+		)
 	}
 	if strings.TrimSpace(opts.RunID) == "" {
 		return nil, fmt.Errorf("orchestrator final artifact requires non-empty run id")
@@ -342,7 +347,7 @@ func orchestratorFinalPath(opts Options) string {
 	return filepath.Join(opts.OutDir, "artifacts", opts.RunID, "final.json")
 }
 
-func isShopeeOrchestratorSkillMode(opts Options, src source.Source) bool {
+func isOrchestratorSkillMode(opts Options, src source.Source) bool {
 	if opts.PromptMode != promptModeSkill {
 		return false
 	}
@@ -350,7 +355,16 @@ func isShopeeOrchestratorSkillMode(opts Options, src source.Source) bool {
 	if skillName == "" {
 		skillName = defaultSkillName(src)
 	}
-	return skillName == shopeeOrchestratorPipelineSkill
+	return isSupportedOrchestratorSkill(skillName)
+}
+
+func isSupportedOrchestratorSkill(skillName string) bool {
+	switch strings.TrimSpace(skillName) {
+	case shopeeOrchestratorPipelineSkill, taobaoOrchestratorPipelineSkill:
+		return true
+	default:
+		return false
+	}
 }
 
 func nowISO() string {

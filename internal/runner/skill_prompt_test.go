@@ -60,8 +60,35 @@ func TestBuildSkillPrompt_RejectsUnsupportedShopeeSkill(t *testing.T) {
 	}
 }
 
+func TestBuildSkillPrompt_Taobao(t *testing.T) {
+	got, err := buildSkillPrompt(source.Taobao, "https://item.taobao.com/item.htm?id=1", "", "codex", "", "out")
+	if err != nil {
+		t.Fatalf("buildSkillPrompt error: %v", err)
+	}
+	if !strings.Contains(got, taobaoOrchestratorPipelineSkill) {
+		t.Fatalf("expected skill name in prompt: %s", got)
+	}
+	if !strings.Contains(got, "https://item.taobao.com/item.htm?id=1") {
+		t.Fatalf("expected URL in prompt: %s", got)
+	}
+}
+
+func TestBuildSkillPrompt_RejectsUnsupportedTaobaoSkill(t *testing.T) {
+	_, err := buildSkillPrompt(
+		source.Taobao,
+		"https://item.taobao.com/item.htm?id=1",
+		"taobao-page-snapshot",
+		"codex",
+		"",
+		"out",
+	)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func TestBuildSkillPrompt_UnsupportedSource(t *testing.T) {
-	_, err := buildSkillPrompt(source.Taobao, "https://taobao.com/item/1", "", "codex", "", "out")
+	_, err := buildSkillPrompt(source.Source("unknown"), "https://example.com/item/1", "", "codex", "", "out")
 	if err == nil {
 		t.Fatalf("expected error for unsupported source")
 	}

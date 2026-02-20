@@ -21,6 +21,10 @@ endif
 # Priority: explicit `tool=...` > CRAWL_TOOL from env/.env > codex.
 tool ?= $(if $(strip $(CRAWL_TOOL)),$(strip $(CRAWL_TOOL)),codex)
 
+# Prompt mode for dev-once.
+# Priority: explicit `prompt_mode=...` > CRAWL_PROMPT_MODE from env/.env > skill.
+prompt_mode ?= $(if $(strip $(CRAWL_PROMPT_MODE)),$(strip $(CRAWL_PROMPT_MODE)),skill)
+
 .PHONY: help
 help:
 	@printf "%s\n" \
@@ -32,7 +36,7 @@ help:
 	"  make devtool-upload env=<name> [dest=<remote_path>]  Upload devtool binary to server" \
 	"  make devtool-deploy env=<name> [dest=<remote_path>]  Build + upload devtool to server" \
 	"  make auth-upload env=<name> [auth_tool=codex|gemini|both]  Upload tool auth/config to server" \
-	"  make dev-once tool=codex|gemini url=<product_url>  Crawl one URL on the host (fast loop)" \
+	"  make dev-once tool=codex|gemini url=<product_url> [prompt_mode=skill|legacy]  Crawl one URL on the host (fast loop)" \
 	"  make docker-doctor tool=codex|gemini  Check Chrome + tool auth for Docker runs" \
 	"  make docker-once tool=codex|gemini url=<product_url>  Crawl one URL in Docker (parity check)" \
 		"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
@@ -84,14 +88,14 @@ devtool-deploy: devtool-build devtool-upload
 .PHONY: dev-once
 dev-once: dev-doctor
 	@URL="$(strip $(url))"; \
-	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make dev-once url=https://shopee.tw/..."; exit 2; fi; \
-	go run ./cmd/devtool once --tool "$(tool)" --url "$$URL"
+	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make dev-once url=https://shopee.tw/...|https://item.taobao.com/...|https://detail.tmall.com/..."; exit 2; fi; \
+	go run ./cmd/devtool once --tool "$(tool)" --prompt-mode "$(prompt_mode)" --url "$$URL"
 
 .PHONY: docker-once
 docker-once: docker-doctor
 	@URL="$(strip $(url))"; \
-	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make docker-once url=https://shopee.tw/..."; exit 2; fi; \
-	docker compose run --remove-orphans --rm --build runner /app/devtool once --tool "$(tool)" --url "$$URL" --out-dir /out
+	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make docker-once url=https://shopee.tw/...|https://item.taobao.com/...|https://detail.tmall.com/..."; exit 2; fi; \
+	docker compose run --remove-orphans --rm --build runner /app/devtool once --tool "$(tool)" --prompt-mode "$(prompt_mode)" --url "$$URL" --out-dir /out
 
 .PHONY: docker-doctor
 docker-doctor:

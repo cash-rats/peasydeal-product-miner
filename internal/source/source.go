@@ -28,7 +28,9 @@ func Detect(rawURL string) (Source, error) {
 		return Shopee, nil
 	case host == "taobao.com" || strings.HasSuffix(host, ".taobao.com"):
 		return Taobao, nil
+	case host == "tmall.com" || strings.HasSuffix(host, ".tmall.com"):
+		return Taobao, nil
 	default:
-		return "", fmt.Errorf("unsupported URL host %q (only Shopee and Taobao are supported)", host)
+		return "", fmt.Errorf("unsupported URL host %q (only Shopee/Taobao/Tmall are supported)", host)
 	}
 }

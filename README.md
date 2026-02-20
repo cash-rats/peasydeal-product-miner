@@ -39,7 +39,7 @@ Optional (only if you want to override defaults):
 - `RABBITMQ_PREFETCH`
 - `RABBITMQ_DECLARE_TOPOLOGY`
 - `CRAWL_PROMPT_MODE` (`legacy` by default; set to `skill` to use skill-mode prompts)
-- `CRAWL_SKILL_NAME` (optional; defaults to `shopee-product-crawler` in skill mode)
+- `CRAWL_SKILL_NAME` (optional; in skill mode runner auto-selects by source, e.g. Shopee/Taobao orchestrator)
 
 ## 3) Run database migrations (once)
 
@@ -83,8 +83,8 @@ export CRAWL_SKILL_NAME=shopee-orchestrator-pipeline
 ```
 
 Note:
-- If `CRAWL_SKILL_NAME` is not set, runner may still default to `shopee-product-crawler`.
-- Set `CRAWL_SKILL_NAME=shopee-orchestrator-pipeline` explicitly to use the new multi-stage pipeline.
+- If `CRAWL_SKILL_NAME` is not set, runner auto-selects by URL source (`shopee-orchestrator-pipeline` or `taobao-orchestrator-pipeline`).
+- Set `CRAWL_SKILL_NAME` explicitly only when you want to force one specific orchestrator skill.
 
 ### Local environment
 
@@ -108,7 +108,7 @@ Equivalent script (if needed):
 Then run from repo root with:
 
 - `CRAWL_PROMPT_MODE=skill`
-- `CRAWL_SKILL_NAME=shopee-orchestrator-pipeline`
+- Optional: `CRAWL_SKILL_NAME=shopee-orchestrator-pipeline|taobao-orchestrator-pipeline`
 
 ### Docker environment
 
@@ -123,7 +123,9 @@ Then set in `.env` (or environment) for `worker` / `runner`:
 
 ```bash
 CRAWL_PROMPT_MODE=skill
-CRAWL_SKILL_NAME=shopee-orchestrator-pipeline
+# Optional override:
+# CRAWL_SKILL_NAME=shopee-orchestrator-pipeline
+# CRAWL_SKILL_NAME=taobao-orchestrator-pipeline
 ```
 
 ## Remote Worker (host Chrome + auth upload)

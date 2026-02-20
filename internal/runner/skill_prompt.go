@@ -9,6 +9,7 @@ import (
 )
 
 const shopeeOrchestratorPipelineSkill = "shopee-orchestrator-pipeline"
+const taobaoOrchestratorPipelineSkill = "taobao-orchestrator-pipeline"
 
 func buildSkillPrompt(src source.Source, url string, skillName string, tool string, runID string, outDir string) (string, error) {
 	skillName = strings.TrimSpace(skillName)
@@ -19,11 +20,17 @@ func buildSkillPrompt(src source.Source, url string, skillName string, tool stri
 		return "", fmt.Errorf("no default skill for source %q", src)
 	}
 
-	if src != source.Shopee {
-		return "", fmt.Errorf("prompt_mode=skill is currently supported for shopee only (source=%q)", src)
-	}
-	if skillName != shopeeOrchestratorPipelineSkill {
-		return "", fmt.Errorf("unsupported shopee skill %q (only %q is supported)", skillName, shopeeOrchestratorPipelineSkill)
+	switch src {
+	case source.Shopee:
+		if skillName != shopeeOrchestratorPipelineSkill {
+			return "", fmt.Errorf("unsupported shopee skill %q (only %q is supported)", skillName, shopeeOrchestratorPipelineSkill)
+		}
+	case source.Taobao:
+		if skillName != taobaoOrchestratorPipelineSkill {
+			return "", fmt.Errorf("unsupported taobao skill %q (only %q is supported)", skillName, taobaoOrchestratorPipelineSkill)
+		}
+	default:
+		return "", fmt.Errorf("prompt_mode=skill is unsupported for source=%q", src)
 	}
 
 	var tail strings.Builder
@@ -46,6 +53,8 @@ func defaultSkillName(src source.Source) string {
 	switch src {
 	case source.Shopee:
 		return shopeeOrchestratorPipelineSkill
+	case source.Taobao:
+		return taobaoOrchestratorPipelineSkill
 	default:
 		return ""
 	}
