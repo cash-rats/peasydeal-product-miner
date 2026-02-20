@@ -13,6 +13,7 @@ import gzip
 import hashlib
 import json
 import os
+import re
 import secrets
 import socket
 import struct
@@ -71,12 +72,16 @@ def pick_target(
                 return t
         raise CDPError(f"target_id not found: {target_id}")
 
-    needle = url_contains.strip().lower()
-    if needle:
+    needle_raw = url_contains.strip().lower()
+    if needle_raw:
+        needles = [x.strip() for x in re.split(r"[|,]", needle_raw) if x.strip()]
+        if not needles:
+            needles = [needle_raw]
         for t in pages:
-            if needle in str(t.get("url", "")).lower():
+            page_url = str(t.get("url", "")).lower()
+            if any(n in page_url for n in needles):
                 return t
-        raise CDPError(f"no page target url contains: {url_contains}")
+        raise CDPError(f"no page target url contains any of: {needles}")
 
     for t in pages:
         u = str(t.get("url", "")).lower()
@@ -311,7 +316,11 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument("--browser-url", default="http://127.0.0.1:9222", help="Chrome remote debug base URL")
     p.add_argument("--output", required=True, help="Output html path (use .gz for gzip)")
     p.add_argument("--target-id", default="", help="Exact target id")
-    p.add_argument("--url-contains", default="", help="Pick target whose url contains this text")
+    p.add_argument(
+        "--url-contains",
+        default="",
+        help="Pick target whose url contains this text; supports multiple needles via '|' or ','",
+    )
     p.add_argument("--max-bytes", type=int, default=0, help="Optional UTF-8 byte cap for html; 0=unlimited")
     p.add_argument("--gzip", action="store_true", help="Force gzip output even if path does not end with .gz")
     return p.parse_args(argv)

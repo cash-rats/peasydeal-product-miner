@@ -1,6 +1,6 @@
 ---
 name: taobao-page-snapshot
-description: Create HTML-only snapshot artifacts for a Taobao product page using Chrome DevTools MCP interactions + a Python CDP HTML capture helper.
+description: Create HTML-only snapshot artifacts for a Taobao/Tmall product page using Chrome DevTools MCP interactions + a Python CDP HTML capture helper.
 ---
 
 # Taobao Page Snapshot (S0, HTML-Only)
@@ -35,12 +35,12 @@ After each interaction state is ready, call:
 python3 ./scripts/cdp_snapshot_html.py \
   --browser-url http://127.0.0.1:9222 \
   --output out/artifacts/<run_id>/<file>.html.gz \
-  --url-contains "taobao"
+  --url-contains "taobao|tmall"
 ```
 
 Notes:
 
-- Prefer selecting the active Taobao tab via `--url-contains`.
+- Prefer selecting the active Taobao/Tmall tab via `--url-contains`.
 - If needed, use `--target-id` when the target is known.
 - Script prints small JSON (status/bytes/hash/truncated). Use it to build manifest entries.
 
@@ -91,7 +91,7 @@ Snapshots must be useful for downstream extraction (core/images/variations/varia
 Required signals before capture:
 
 - Core-ready signal: page title + visible price text (`￥`/`¥`) + visible SKU labels (`颜色分类`/`规格`/`型号`/`尺码`) when available.
-- Wall signal: login/verification text (e.g. `login.taobao.com`, `验证码`, `安全验证`, `请登录`, `captcha`) and missing core-ready signal.
+- Wall signal: login/verification text (e.g. `login.taobao.com`, `login.tmall.com`, `验证码`, `安全验证`, `请登录`, `captcha`) and missing core-ready signal.
 
 ## Steps (single session)
 
