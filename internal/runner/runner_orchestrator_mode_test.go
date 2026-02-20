@@ -9,25 +9,25 @@ import (
 func TestIsOrchestratorSkillMode_ShopeeDefault(t *testing.T) {
 	t.Parallel()
 
-	ok := isOrchestratorSkillMode(Options{PromptMode: promptModeSkill}, source.Shopee)
+	ok := isOrchestratorSkillMode(Options{}, source.Shopee)
 	if !ok {
-		t.Fatalf("expected shopee default skill-mode to be orchestrator")
+		t.Fatalf("expected shopee default to be orchestrator")
 	}
 }
 
 func TestIsOrchestratorSkillMode_TaobaoDefault(t *testing.T) {
 	t.Parallel()
 
-	ok := isOrchestratorSkillMode(Options{PromptMode: promptModeSkill}, source.Taobao)
+	ok := isOrchestratorSkillMode(Options{}, source.Taobao)
 	if !ok {
-		t.Fatalf("expected taobao default skill-mode to be orchestrator")
+		t.Fatalf("expected taobao default to be orchestrator")
 	}
 }
 
 func TestIsOrchestratorSkillMode_RejectsUnknownSkill(t *testing.T) {
 	t.Parallel()
 
-	ok := isOrchestratorSkillMode(Options{PromptMode: promptModeSkill, SkillName: "shopee-page-snapshot"}, source.Shopee)
+	ok := isOrchestratorSkillMode(Options{SkillName: "shopee-page-snapshot"}, source.Shopee)
 	if ok {
 		t.Fatalf("expected non-orchestrator skill to be rejected")
 	}

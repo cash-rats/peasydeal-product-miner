@@ -30,7 +30,7 @@ func buildSkillPrompt(src source.Source, url string, skillName string, tool stri
 			return "", fmt.Errorf("unsupported taobao skill %q (only %q is supported)", skillName, taobaoOrchestratorPipelineSkill)
 		}
 	default:
-		return "", fmt.Errorf("prompt_mode=skill is unsupported for source=%q", src)
+		return "", fmt.Errorf("unsupported source for skill routing: %q", src)
 	}
 
 	var tail strings.Builder

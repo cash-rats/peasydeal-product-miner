@@ -21,10 +21,6 @@ endif
 # Priority: explicit `tool=...` > CRAWL_TOOL from env/.env > codex.
 tool ?= $(if $(strip $(CRAWL_TOOL)),$(strip $(CRAWL_TOOL)),codex)
 
-# Prompt mode for dev-once.
-# Priority: explicit `prompt_mode=...` > CRAWL_PROMPT_MODE from env/.env > skill.
-prompt_mode ?= $(if $(strip $(CRAWL_PROMPT_MODE)),$(strip $(CRAWL_PROMPT_MODE)),skill)
-
 # Optional explicit skill name for dev-once/docker-once in skill mode.
 # If empty, dev-once/docker-once clears CRAWL_SKILL_NAME and lets runner auto-select by URL source.
 skill_name ?=
@@ -40,7 +36,7 @@ help:
 	"  make devtool-upload env=<name> [dest=<remote_path>]  Upload devtool binary to server" \
 	"  make devtool-deploy env=<name> [dest=<remote_path>]  Build + upload devtool to server" \
 	"  make auth-upload env=<name> [auth_tool=codex|gemini|both]  Upload tool auth/config to server" \
-	"  make dev-once tool=codex|gemini url=<product_url> [prompt_mode=skill|legacy] [skill_name=<skill>]  Crawl one URL on the host (fast loop)" \
+	"  make dev-once tool=codex|gemini url=<product_url> [skill_name=<skill>]  Crawl one URL on the host (fast loop)" \
 	"  make docker-doctor tool=codex|gemini  Check Chrome + tool auth for Docker runs" \
 	"  make docker-once tool=codex|gemini url=<product_url>  Crawl one URL in Docker (parity check)" \
 		"  make docker-shell               Open a shell in the runner container (useful for debugging)" \
@@ -95,9 +91,9 @@ dev-once: dev-doctor
 	SKILL_NAME="$(strip $(skill_name))"; \
 	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make dev-once url=https://shopee.tw/...|https://item.taobao.com/...|https://detail.tmall.com/..."; exit 2; fi; \
 	if [[ -n "$$SKILL_NAME" ]]; then \
-		go run ./cmd/devtool once --tool "$(tool)" --prompt-mode "$(prompt_mode)" --skill-name "$$SKILL_NAME" --url "$$URL"; \
+		go run ./cmd/devtool once --tool "$(tool)" --skill-name "$$SKILL_NAME" --url "$$URL"; \
 	else \
-		CRAWL_SKILL_NAME= go run ./cmd/devtool once --tool "$(tool)" --prompt-mode "$(prompt_mode)" --url "$$URL"; \
+		CRAWL_SKILL_NAME= go run ./cmd/devtool once --tool "$(tool)" --url "$$URL"; \
 	fi
 
 .PHONY: docker-once
@@ -106,9 +102,9 @@ docker-once: docker-doctor
 	SKILL_NAME="$(strip $(skill_name))"; \
 	if [[ -z "$$URL" ]]; then echo "Missing URL. Usage: make docker-once url=https://shopee.tw/...|https://item.taobao.com/...|https://detail.tmall.com/..."; exit 2; fi; \
 	if [[ -n "$$SKILL_NAME" ]]; then \
-		docker compose run --remove-orphans --rm --build runner /app/devtool once --tool "$(tool)" --prompt-mode "$(prompt_mode)" --skill-name "$$SKILL_NAME" --url "$$URL" --out-dir /out; \
+		docker compose run --remove-orphans --rm --build runner /app/devtool once --tool "$(tool)" --skill-name "$$SKILL_NAME" --url "$$URL" --out-dir /out; \
 	else \
-		docker compose run --remove-orphans --rm --build -e CRAWL_SKILL_NAME= runner /app/devtool once --tool "$(tool)" --prompt-mode "$(prompt_mode)" --url "$$URL" --out-dir /out; \
+		docker compose run --remove-orphans --rm --build -e CRAWL_SKILL_NAME= runner /app/devtool once --tool "$(tool)" --url "$$URL" --out-dir /out; \
 	fi
 
 .PHONY: docker-doctor

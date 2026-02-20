@@ -10,7 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// CrawlOut matches the "Output contract" in config/prompt.shopee.product.txt.
+// CrawlOut matches the shared crawler output contract used by orchestrator skills.
 // The runner may add extra keys to the persisted output, but the fields below
 // are the ones we validate strictly.
 type CrawlOut struct {

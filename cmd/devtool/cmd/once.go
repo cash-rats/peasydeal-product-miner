@@ -17,14 +17,12 @@ import (
 
 func newOnceCmd() *cobra.Command {
 	var (
-		url        string
-		promptFile string
-		outDir     string
-		model      string
-		tool       string
-		promptMode string
-		skillName  string
-		runID      string
+		url       string
+		outDir    string
+		model     string
+		tool      string
+		skillName string
+		runID     string
 	)
 
 	cmd := &cobra.Command{
@@ -66,13 +64,11 @@ func newOnceCmd() *cobra.Command {
 				) {
 					outPath, _, err := r.RunOnce(
 						runnerPkg.Options{
-							URL:        url,
-							PromptFile: promptFile,
-							OutDir:     outDir,
-							Tool:       tool,
-							PromptMode: promptMode,
-							SkillName:  skillName,
-							RunID:      resolveRunID(runID),
+							URL:       url,
+							OutDir:    outDir,
+							Tool:      tool,
+							SkillName: skillName,
+							RunID:     resolveRunID(runID),
 						},
 					)
 
@@ -102,12 +98,10 @@ func newOnceCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&url, "url", "", "Product URL (Shopee/Taobao/Tmall)")
-	cmd.Flags().StringVar(&promptFile, "prompt-file", "", "Prompt template file path (optional; auto-selected by URL when empty)")
 	cmd.Flags().StringVar(&outDir, "out-dir", "out", "Output directory for result JSON")
 	cmd.Flags().StringVar(&model, "model", "", "Model override for the selected tool (optional; defaults to CODEX_MODEL/GEMINI_MODEL config)")
 	cmd.Flags().StringVar(&tool, "tool", "codex", "Tool to use (codex or gemini)")
-	cmd.Flags().StringVar(&promptMode, "prompt-mode", "", "Prompt mode: legacy or skill (optional; defaults to CRAWL_PROMPT_MODE or legacy)")
-	cmd.Flags().StringVar(&skillName, "skill-name", "", "Skill name override when --prompt-mode=skill (optional)")
+	cmd.Flags().StringVar(&skillName, "skill-name", "", "Skill name override (optional; defaults by URL source)")
 	cmd.Flags().StringVar(&runID, "run-id", "", "Run ID for artifact correlation (optional; auto-generated when empty)")
 	return cmd
 }

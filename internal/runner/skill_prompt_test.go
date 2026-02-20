@@ -8,25 +8,24 @@ import (
 	"peasydeal-product-miner/internal/source"
 )
 
-func TestNormalizeOptions_DefaultsToLegacyMode(t *testing.T) {
-	t.Setenv("CRAWL_PROMPT_MODE", "")
+func TestNormalizeOptions_DefaultsToolToCodex(t *testing.T) {
 	opts := normalizeOptions(Options{
 		URL:    "https://shopee.tw/product/1/2",
 		OutDir: "out",
 	})
-	if opts.PromptMode != promptModeLegacy {
-		t.Fatalf("expected prompt mode %q, got %q", promptModeLegacy, opts.PromptMode)
+	if opts.Tool != "codex" {
+		t.Fatalf("expected default tool codex, got %q", opts.Tool)
 	}
 }
 
-func TestNormalizeOptions_UsesEnvPromptMode(t *testing.T) {
-	t.Setenv("CRAWL_PROMPT_MODE", "skill")
+func TestNormalizeOptions_UsesEnvSkillName(t *testing.T) {
+	t.Setenv("CRAWL_SKILL_NAME", taobaoOrchestratorPipelineSkill)
 	opts := normalizeOptions(Options{
 		URL:    "https://shopee.tw/product/1/2",
 		OutDir: "out",
 	})
-	if opts.PromptMode != promptModeSkill {
-		t.Fatalf("expected prompt mode %q, got %q", promptModeSkill, opts.PromptMode)
+	if opts.SkillName != taobaoOrchestratorPipelineSkill {
+		t.Fatalf("expected skill name from env, got %q", opts.SkillName)
 	}
 }
 
@@ -111,18 +110,6 @@ func TestBuildSkillPrompt_WithRunID(t *testing.T) {
 	}
 	if !strings.Contains(got, "Artifact dir: out/artifacts/run-123") {
 		t.Fatalf("expected artifact dir in prompt, got: %s", got)
-	}
-}
-
-func TestBuildPrompt_SkillModeRejectsPromptFile(t *testing.T) {
-	_, err := buildPrompt(Options{
-		URL:        "https://shopee.tw/product/1/2",
-		OutDir:     "out",
-		PromptMode: promptModeSkill,
-		PromptFile: "config/prompt.shopee.product.txt",
-	}, source.Shopee)
-	if err == nil {
-		t.Fatalf("expected error")
 	}
 }
 

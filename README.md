@@ -38,7 +38,6 @@ Optional (only if you want to override defaults):
 - `RABBITMQ_ROUTING_KEY`
 - `RABBITMQ_PREFETCH`
 - `RABBITMQ_DECLARE_TOPOLOGY`
-- `CRAWL_PROMPT_MODE` (`legacy` by default; set to `skill` to use skill-mode prompts)
 - `CRAWL_SKILL_NAME` (optional; in skill mode runner auto-selects by source, e.g. Shopee/Taobao orchestrator)
 
 ## 3) Run database migrations (once)
@@ -78,7 +77,6 @@ Maintenance policy:
 Recommended env for the new snapshot-first pipeline:
 
 ```bash
-export CRAWL_PROMPT_MODE=skill
 export CRAWL_SKILL_NAME=shopee-orchestrator-pipeline
 ```
 
@@ -107,7 +105,6 @@ Equivalent script (if needed):
 
 Then run from repo root with:
 
-- `CRAWL_PROMPT_MODE=skill`
 - Optional: `CRAWL_SKILL_NAME=shopee-orchestrator-pipeline|taobao-orchestrator-pipeline`
 
 ### Docker environment
@@ -122,7 +119,6 @@ No extra sync step is required. Docker mounts these directories directly, and `s
 Then set in `.env` (or environment) for `worker` / `runner`:
 
 ```bash
-CRAWL_PROMPT_MODE=skill
 # Optional override:
 # CRAWL_SKILL_NAME=shopee-orchestrator-pipeline
 # CRAWL_SKILL_NAME=taobao-orchestrator-pipeline

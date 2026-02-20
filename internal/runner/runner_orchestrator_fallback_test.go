@@ -24,10 +24,9 @@ func TestLoadOrchestratorFinalResult_OK(t *testing.T) {
 	}
 
 	res, err := loadOrchestratorFinalResult(Options{
-		OutDir:     outDir,
-		PromptMode: promptModeSkill,
-		SkillName:  shopeeOrchestratorPipelineSkill,
-		RunID:      runID,
+		OutDir:    outDir,
+		SkillName: shopeeOrchestratorPipelineSkill,
+		RunID:     runID,
 	}, source.Shopee)
 	if err != nil {
 		t.Fatalf("loadOrchestratorFinalResult error: %v", err)
@@ -40,14 +39,13 @@ func TestLoadOrchestratorFinalResult_OK(t *testing.T) {
 	}
 }
 
-func TestLoadOrchestratorFinalResult_RejectsNonSkillMode(t *testing.T) {
+func TestLoadOrchestratorFinalResult_RejectsUnsupportedSkill(t *testing.T) {
 	t.Parallel()
 
 	_, err := loadOrchestratorFinalResult(Options{
-		OutDir:     t.TempDir(),
-		PromptMode: promptModeLegacy,
-		SkillName:  shopeeOrchestratorPipelineSkill,
-		RunID:      "run-1",
+		OutDir:    t.TempDir(),
+		SkillName: "shopee-page-snapshot",
+		RunID:     "run-1",
 	}, source.Shopee)
 	if err == nil {
 		t.Fatalf("expected error")
@@ -70,9 +68,8 @@ func TestLoadOrchestratorFinalResult_DefaultSkillNameForShopee(t *testing.T) {
 	}
 
 	res, err := loadOrchestratorFinalResult(Options{
-		OutDir:     outDir,
-		PromptMode: promptModeSkill,
-		RunID:      runID,
+		OutDir: outDir,
+		RunID:  runID,
 	}, source.Shopee)
 	if err != nil {
 		t.Fatalf("loadOrchestratorFinalResult error: %v", err)
@@ -98,9 +95,8 @@ func TestLoadOrchestratorFinalResult_DefaultSkillNameForTaobao(t *testing.T) {
 	}
 
 	res, err := loadOrchestratorFinalResult(Options{
-		OutDir:     outDir,
-		PromptMode: promptModeSkill,
-		RunID:      runID,
+		OutDir: outDir,
+		RunID:  runID,
 	}, source.Taobao)
 	if err != nil {
 		t.Fatalf("loadOrchestratorFinalResult error: %v", err)
@@ -126,10 +122,9 @@ func TestLoadOrchestratorFinalResult_StatusErrorFails(t *testing.T) {
 	}
 
 	_, err := loadOrchestratorFinalResult(Options{
-		OutDir:     outDir,
-		PromptMode: promptModeSkill,
-		SkillName:  shopeeOrchestratorPipelineSkill,
-		RunID:      runID,
+		OutDir:    outDir,
+		SkillName: shopeeOrchestratorPipelineSkill,
+		RunID:     runID,
 	}, source.Shopee)
 	if err == nil {
 		t.Fatalf("expected error")

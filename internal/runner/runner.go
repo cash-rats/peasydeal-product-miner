@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"peasydeal-product-miner/internal/crawler"
 	"peasydeal-product-miner/internal/source"
 
 	"github.com/go-playground/validator/v10"
@@ -59,13 +58,11 @@ func (r Result) ensureImagesArray() {
 }
 
 type Options struct {
-	URL        string `validate:"required"`
-	PromptFile string
-	OutDir     string `validate:"required"`
-	Tool       string // "codex" or "gemini"
-	PromptMode string `validate:"omitempty,oneof=legacy skill"` // "legacy" (default) or "skill"
-	SkillName  string // optional override; used when PromptMode=skill
-	RunID      string // optional run id for artifact correlation; injected into skill-mode prompt when non-empty
+	URL       string `validate:"required"`
+	OutDir    string `validate:"required"`
+	Tool      string // "codex" or "gemini"
+	SkillName string // optional override; empty means auto-select by source
+	RunID     string // optional run id for artifact correlation; injected into skill prompt when non-empty
 
 	// Cmd is the binary name/path to execute (e.g. "codex" or "gemini").
 	// If empty, CodexCmd is used for backward compatibility.
@@ -89,16 +86,8 @@ type Options struct {
 
 func normalizeOptions(opts Options) Options {
 	opts.URL = strings.TrimSpace(opts.URL)
-	opts.PromptFile = strings.TrimSpace(opts.PromptFile)
 	opts.OutDir = strings.TrimSpace(opts.OutDir)
 	opts.Tool = strings.TrimSpace(opts.Tool)
-	opts.PromptMode = normalizePromptMode(opts.PromptMode)
-	if opts.PromptMode == "" {
-		opts.PromptMode = normalizePromptMode(os.Getenv("CRAWL_PROMPT_MODE"))
-	}
-	if opts.PromptMode == "" {
-		opts.PromptMode = promptModeLegacy
-	}
 	opts.SkillName = strings.TrimSpace(opts.SkillName)
 	if opts.SkillName == "" {
 		opts.SkillName = strings.TrimSpace(os.Getenv("CRAWL_SKILL_NAME"))
@@ -213,16 +202,7 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 		return "", res, err
 	}
 
-	if opts.PromptMode == promptModeLegacy && opts.PromptFile == "" {
-		c, err := crawler.ForSource(src)
-		if err != nil {
-			res := errorResult(opts.URL, err)
-			return "", res, err
-		}
-		opts.PromptFile = c.DefaultPromptFile()
-	}
-
-	prompt, err := buildPrompt(opts, src)
+	prompt, err := buildSkillPrompt(src, opts.URL, opts.SkillName, opts.Tool, opts.RunID, opts.OutDir)
 	r.logger.Infof("📨 prompt used: %v", prompt)
 	if err != nil {
 		res := errorResult(opts.URL, err)
@@ -300,10 +280,6 @@ func (r *Runner) RunOnce(opts Options) (string, Result, error) {
 }
 
 func loadOrchestratorFinalResult(opts Options, src source.Source) (Result, error) {
-	if opts.PromptMode != promptModeSkill {
-		return nil, fmt.Errorf("orchestrator fallback disabled: prompt mode is not skill")
-	}
-
 	skillName := strings.TrimSpace(opts.SkillName)
 	if skillName == "" {
 		skillName = defaultSkillName(src)
@@ -348,9 +324,6 @@ func orchestratorFinalPath(opts Options) string {
 }
 
 func isOrchestratorSkillMode(opts Options, src source.Source) bool {
-	if opts.PromptMode != promptModeSkill {
-		return false
-	}
 	skillName := strings.TrimSpace(opts.SkillName)
 	if skillName == "" {
 		skillName = defaultSkillName(src)
@@ -369,28 +342,6 @@ func isSupportedOrchestratorSkill(skillName string) bool {
 
 func nowISO() string {
 	return time.Now().UTC().Format(time.RFC3339Nano)
-}
-
-func loadPrompt(promptPath string, url string) (string, error) {
-	b, err := os.ReadFile(promptPath)
-	if err != nil {
-		return "", err
-	}
-	return strings.ReplaceAll(string(b), "{{URL}}", url), nil
-}
-
-func buildPrompt(opts Options, src source.Source) (string, error) {
-	switch opts.PromptMode {
-	case promptModeSkill:
-		if opts.PromptFile != "" {
-			return "", fmt.Errorf("prompt_file is not supported when prompt_mode=skill")
-		}
-		return buildSkillPrompt(src, opts.URL, opts.SkillName, opts.Tool, opts.RunID, opts.OutDir)
-	case promptModeLegacy:
-		return loadPrompt(opts.PromptFile, opts.URL)
-	default:
-		return "", fmt.Errorf("unsupported prompt_mode: %q", opts.PromptMode)
-	}
 }
 
 func parseResult(toolName string, raw string) (Result, bool, error) {

@@ -56,12 +56,11 @@ func TestRunOnce_OrchestratorSkill_UsesFinalArtifactEvenWhenToolOutputInvalid(t 
 	}
 
 	_, res, err := r.RunOnce(Options{
-		URL:        "https://shopee.tw/i.1.2",
-		OutDir:     outDir,
-		Tool:       "gemini",
-		PromptMode: promptModeSkill,
-		SkillName:  shopeeOrchestratorPipelineSkill,
-		RunID:      runID,
+		URL:       "https://shopee.tw/i.1.2",
+		OutDir:    outDir,
+		Tool:      "gemini",
+		SkillName: shopeeOrchestratorPipelineSkill,
+		RunID:     runID,
 	})
 	if err != nil {
 		t.Fatalf("RunOnce error: %v", err)
@@ -97,12 +96,11 @@ func TestRunOnce_OrchestratorSkill_FinalArtifactStatusErrorReturnsError(t *testi
 	}
 
 	_, res, err := r.RunOnce(Options{
-		URL:        "https://shopee.tw/i.1.2",
-		OutDir:     outDir,
-		Tool:       "gemini",
-		PromptMode: promptModeSkill,
-		SkillName:  shopeeOrchestratorPipelineSkill,
-		RunID:      runID,
+		URL:       "https://shopee.tw/i.1.2",
+		OutDir:    outDir,
+		Tool:      "gemini",
+		SkillName: shopeeOrchestratorPipelineSkill,
+		RunID:     runID,
 	})
 	if err == nil {
 		t.Fatalf("expected error")
