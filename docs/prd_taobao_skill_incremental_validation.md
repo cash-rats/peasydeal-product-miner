@@ -195,15 +195,15 @@ Phase-1 scope:
 - [x] 驗收通過（可行性 + 正確性）
 
 ### 12.5 Skill 4: `taobao-product-variations`
-- [ ] `SKILL.md` 初版完成
-- [ ] `extract_variations_from_html.py` 初版完成
-- [ ] 每筆含 `title/position/price`
-- [ ] 去重後最多 20 筆
-- [ ] 可用 variation snapshots 補足 per-variation price
-- [ ] 無規格時回 `status=ok` + `variations=[]`
-- [ ] 致命錯誤才回 `status=error`
-- [ ] 輸出 `variations_extract.json`
-- [ ] 驗收通過（可行性 + 正確性）
+- [x] `SKILL.md` 初版完成
+- [x] `extract_variations_from_html.py` 初版完成
+- [x] 每筆含 `title/position/price`
+- [x] 去重後最多 20 筆
+- [x] 可用 variation snapshots 補足 per-variation price
+- [x] 無規格時回 `status=ok` + `variations=[]`
+- [x] 致命錯誤才回 `status=error`
+- [x] 輸出 `variations_extract.json`
+- [x] 驗收通過（可行性 + 正確性）
 
 ### 12.6 Skill 5: `taobao-variation-image-map`
 - [ ] `SKILL.md` 初版完成

@@ -1,0 +1,74 @@
+---
+name: taobao-product-variations
+description: Parse Taobao snapshot HTML artifacts offline and return short JSON for product variation options (including per-variation price when available).
+---
+
+# Taobao Product Variations (variations_extract)
+
+This skill is offline-only.
+
+## Input
+
+Runtime prompt must provide either:
+
+- `artifact_dir` (preferred), or
+- explicit path for variation html artifact.
+
+Do not open/navigate browser pages in this skill.
+
+## Required behavior
+
+1. Read HTML artifacts from snapshot stage, preferred order:
+   - `s0-initial.html.gz`
+   - `s0-initial.html`
+   - backward compatibility fallback: `s0-page.html.gz`, `s0-page.html`
+2. Use optional variation snapshots as enrichment when present:
+   - `s0-variation-<position>.html.gz` / `.html` (best-effort)
+3. Normalize each option to:
+   - `title` (non-empty string)
+   - `position` (0-based integer)
+   - `price` (numeric-like string without currency symbol, e.g. `782`; empty string when unavailable)
+4. Extract per-variation price from snapshot artifacts:
+   - preferred: matching `s0-variation-<position>.html.gz` / `.html` + capture metadata (`_variation<position>_capture.json`)
+   - fallback: `s0-initial.html.gz` / `.html` sku mapping
+5. Remove duplicates by `title` (keep first occurrence order).
+6. Enforce hard max = 20 variations.
+7. If nothing is found, return `status="ok"` with empty list.
+8. Write the same output JSON to `variations_extract.json` under `artifact_dir` (or explicit `--output` path).
+
+Phase-1 scope:
+- prefer `颜色分类` group.
+- if `颜色分类` is missing, fallback to first available variation group.
+
+## Required helper usage
+
+Use local helper script in this skill directory:
+
+```bash
+python3 ./scripts/extract_variations_from_html.py --artifact-dir out/artifacts/<run_id> --output out/artifacts/<run_id>/variations_extract.json
+```
+
+Alternative (explicit file):
+
+```bash
+python3 ./scripts/extract_variations_from_html.py --html-path out/artifacts/<run_id>/s0-initial.html.gz --output out/artifacts/<run_id>/variations_extract.json
+```
+
+## Output (JSON only)
+
+Return exactly one JSON object:
+
+```json
+{
+  "status": "ok|error",
+  "variations": [{"title": "string", "position": 0, "price": "string"}],
+  "error": "string"
+}
+```
+
+Rules:
+
+- `variations` must always exist (use `[]` when empty).
+- Each variation item must include `price` (use `""` when unavailable).
+- `status=error` only for unrecoverable artifact read/parse failures.
+- Output must be JSON only. No markdown fences, no extra text.
