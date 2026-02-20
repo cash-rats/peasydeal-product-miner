@@ -184,15 +184,15 @@ Phase-1 scope:
 - [x] 驗收通過（可行性 + 正確性）
 
 ### 12.4 Skill 3: `taobao-product-images`
-- [ ] `SKILL.md` 初版完成
-- [ ] `extract_images_from_html.py` 初版完成
-- [ ] 只保留 `http/https` URL
-- [ ] URL 去重
-- [ ] 上限 20 張
-- [ ] 無圖片時回 `status=ok` + `images=[]`
-- [ ] 致命錯誤才回 `status=error`
-- [ ] 輸出 `images_extract.json`
-- [ ] 驗收通過（可行性 + 正確性）
+- [x] `SKILL.md` 初版完成
+- [x] `extract_images_from_html.py` 初版完成
+- [x] 只保留 `http/https` URL
+- [x] URL 去重
+- [x] 上限 20 張
+- [x] 無圖片時回 `status=ok` + `images=[]`
+- [x] 致命錯誤才回 `status=error`
+- [x] 輸出 `images_extract.json`
+- [x] 驗收通過（可行性 + 正確性）
 
 ### 12.5 Skill 4: `taobao-product-variations`
 - [ ] `SKILL.md` 初版完成
